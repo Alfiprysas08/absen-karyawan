@@ -1,0 +1,249 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#020617">
+
+  <title>Penggajian Mingguan | Absensi Karyawan</title>
+  <link href="./dist/output.css" rel="stylesheet">
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-100">
+
+  <main class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+
+    <!-- Header -->
+    <header class="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <a href="./admin.html"
+          class="mb-3 inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white">
+          ← Kembali ke Dashboard
+        </a>
+
+        <h1 class="text-2xl font-bold sm:text-3xl">Penggajian Mingguan</h1>
+
+        <p class="mt-2 text-sm text-slate-400">
+          Hitung dan simpan gaji karyawan berdasarkan periode.
+        </p>
+      </div>
+
+      <div class="min-w-48 rounded-2xl border border-emerald-900 bg-slate-900 p-4">
+        <p class="text-xs text-slate-400">Total Gaji Periode</p>
+        <p id="grandTotal" class="mt-2 text-xl font-bold text-emerald-400">
+          Rp0
+        </p>
+      </div>
+    </header>
+
+    <!-- Pesan -->
+    <div id="pageMessage"
+      role="status"
+      aria-live="polite"
+      class="hidden rounded-xl border p-4 text-sm">
+    </div>
+
+    <!-- Pilih Periode -->
+    <section class="rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:p-6">
+
+      <div class="mb-6">
+        <h2 class="text-xl font-bold">Pilih Periode Gaji</h2>
+        <p class="mt-1 text-sm text-slate-400">
+          Tentukan tanggal awal dan akhir untuk menghitung gaji mingguan.
+        </p>
+      </div>
+
+      <form id="periodForm" class="grid grid-cols-1 gap-5 md:grid-cols-3">
+
+        <div>
+          <label for="startDate" class="mb-2 block text-sm font-medium">
+            Tanggal Awal
+          </label>
+
+          <input id="startDate" type="date" required
+            class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none focus:border-blue-500">
+        </div>
+
+        <div>
+          <label for="endDate" class="mb-2 block text-sm font-medium">
+            Tanggal Akhir
+          </label>
+
+          <input id="endDate" type="date" required
+            class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none focus:border-blue-500">
+        </div>
+
+        <div class="flex items-end">
+          <button id="calculateButton" type="submit"
+            class="min-h-12 w-full rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50">
+            Hitung Gaji
+          </button>
+        </div>
+
+      </form>
+
+      <p id="periodLabel" class="mt-4 text-sm text-slate-400">
+        Pilih periode terlebih dahulu.
+      </p>
+    </section>
+
+    <!-- Ringkasan -->
+    <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+
+      <div class="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+        <p class="text-sm text-slate-400">Jumlah Karyawan</p>
+        <p id="employeeCount" class="mt-2 text-2xl font-bold text-white">0</p>
+        <p class="mt-2 text-xs text-slate-500">Karyawan dalam perhitungan</p>
+      </div>
+
+      <div class="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+        <p class="text-sm text-slate-400">Total Hari Hadir</p>
+        <p id="totalAttendanceDays" class="mt-2 text-2xl font-bold text-blue-400">0</p>
+        <p class="mt-2 text-xs text-slate-500">Akumulasi kehadiran periode</p>
+      </div>
+
+      <div class="rounded-2xl border border-emerald-900 bg-slate-900 p-5">
+        <p class="text-sm text-slate-400">Total Gaji Periode</p>
+        <p class="mt-2 text-2xl font-bold text-emerald-400" id="summaryTotal">
+          Rp0
+        </p>
+        <p class="mt-2 text-xs text-slate-500">Gaji pokok ditambah lembur</p>
+      </div>
+
+    </section>
+
+    <!-- Rincian Gaji -->
+    <section class="rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:p-6">
+
+      <div class="mb-5 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold">Rincian Gaji Karyawan</h2>
+          <p class="mt-1 text-sm text-slate-400">
+            Periksa hasil perhitungan sebelum menyimpan penggajian.
+          </p>
+        </div>
+
+        <button id="saveButton" type="button" disabled
+          class="min-h-11 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50">
+          Simpan Periode
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[1050px] text-left text-sm">
+
+          <thead class="border-b border-slate-800 text-slate-400">
+            <tr>
+              <th class="px-3 py-4 font-medium">Karyawan</th>
+              <th class="px-3 py-4 font-medium">Jabatan</th>
+              <th class="px-3 py-4 font-medium">Hari Hadir</th>
+              <th class="px-3 py-4 font-medium">Gaji Harian</th>
+              <th class="px-3 py-4 font-medium">Gaji Pokok</th>
+              <th class="px-3 py-4 font-medium">Lembur</th>
+              <th class="px-3 py-4 font-medium">Total Gaji</th>
+              <th class="px-3 py-4 font-medium">Status</th>
+              <th class="px-3 py-4 font-medium">Aksi</th>
+            </tr>
+          </thead>
+
+          <tbody id="payrollTableBody" class="divide-y divide-slate-800">
+            <tr>
+              <td colspan="9" class="px-3 py-8 text-center text-slate-400">
+                Memuat data penggajian...
+              </td>
+            </tr>
+          </tbody>
+
+        </table>
+      </div>
+
+    </section>
+
+    <!-- Riwayat Penggajian -->
+    <section class="rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:p-6">
+
+      <div class="mb-5">
+        <h2 class="text-xl font-bold">Riwayat Penggajian</h2>
+        <p class="mt-1 text-sm text-slate-400">
+          Buka periode yang telah tersimpan untuk melihat rincian dan status pembayaran.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto]">
+
+        <select id="historySelect"
+          class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none focus:border-blue-500">
+          <option value="">Memuat riwayat...</option>
+        </select>
+
+        <button id="loadHistoryButton" type="button"
+          class="min-h-11 rounded-xl border border-slate-700 px-5 py-3 text-sm font-semibold hover:bg-slate-800 disabled:opacity-50">
+          Buka Riwayat
+        </button>
+
+      </div>
+
+    </section>
+
+    <footer class="border-t border-slate-800 py-5 text-center text-xs text-slate-500">
+      Absensi Karyawan · Modul Penggajian Mingguan
+    </footer>
+
+  </main>
+
+  <script type="module" src="./js/payroll.js"></script>
+
+  <!-- Penyesuaian tampilan pesan dan ringkasan tanpa mengubah payroll.js -->
+  <script>
+    // Samakan ringkasan total di header dan kartu ringkasan.
+    const totalObserver = new MutationObserver(() => {
+      const source = document.getElementById("grandTotal");
+      const target = document.getElementById("summaryTotal");
+
+      if (source && target) target.textContent = source.textContent;
+    });
+
+    totalObserver.observe(document.getElementById("grandTotal"), {
+      childList: true,
+      characterData: true,
+      subtree: true
+    });
+
+    // Pesan ditampilkan hanya ketika payroll.js mengisinya.
+    const message = document.getElementById("pageMessage");
+
+    const messageObserver = new MutationObserver(() => {
+      const hasMessage = message.textContent.trim().length > 0;
+
+      message.classList.toggle("hidden", !hasMessage);
+
+      if (hasMessage) {
+        const text = message.textContent.toLowerCase();
+
+        message.classList.remove(
+          "border-red-800", "bg-red-950/50", "text-red-300",
+          "border-emerald-800", "bg-emerald-950/50", "text-emerald-300",
+          "border-slate-700", "bg-slate-900", "text-slate-300"
+        );
+
+        if (text.includes("gagal") || text.includes("error") ||
+            text.includes("tidak boleh") || text.includes("wajib")) {
+          message.classList.add("border-red-800", "bg-red-950/50", "text-red-300");
+        } else if (text.includes("berhasil") || text.includes("selesai")) {
+          message.classList.add("border-emerald-800", "bg-emerald-950/50", "text-emerald-300");
+        } else {
+          message.classList.add("border-slate-700", "bg-slate-900", "text-slate-300");
+        }
+      }
+    });
+
+    messageObserver.observe(message, {
+      childList: true,
+      characterData: true,
+      subtree: true
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,201 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f172a">
+
+  <title>Rekap Absensi | Absensi Karyawan</title>
+  <link rel="stylesheet" href="./dist/output.css">
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-100">
+
+  <header class="border-b border-slate-800 bg-slate-900">
+    <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-widest text-emerald-400">
+          Admin Portal
+        </p>
+        <h1 class="mt-1 text-lg font-bold sm:text-xl">Rekap Absensi</h1>
+      </div>
+
+      <a href="./admin.html"
+         class="rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium hover:bg-slate-800">
+        Kembali
+      </a>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+
+    <section>
+      <h2 class="text-2xl font-bold">Data Kehadiran Karyawan</h2>
+      <p class="mt-2 text-sm text-slate-400">
+        Pantau kehadiran dan koreksi catatan absensi karyawan.
+      </p>
+    </section>
+
+    <!-- Ringkasan -->
+    <section class="grid gap-4 sm:grid-cols-3">
+      <article class="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+        <p class="text-sm text-slate-400">Total Catatan</p>
+        <p id="totalRecords" class="mt-2 text-3xl font-bold">0</p>
+        <p class="mt-1 text-xs text-slate-500">Sesuai periode dan pencarian</p>
+      </article>
+
+      <article class="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+        <p class="text-sm text-slate-400">Karyawan Hadir</p>
+        <p id="totalEmployees" class="mt-2 text-3xl font-bold text-emerald-400">0</p>
+        <p class="mt-1 text-xs text-slate-500">Karyawan unik berstatus hadir</p>
+      </article>
+
+      <article class="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+        <p class="text-sm text-slate-400">Periode Rekap</p>
+        <p id="periodLabel" class="mt-2 font-bold">Hari ini</p>
+        <p class="mt-1 text-xs text-slate-500">Menggunakan zona waktu WIB</p>
+      </article>
+    </section>
+
+    <!-- Filter -->
+    <section class="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+      <h3 class="font-bold">Filter Data</h3>
+
+      <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
+        <div>
+          <label for="periodFilter" class="mb-2 block text-sm text-slate-300">
+            Jenis Rekap
+          </label>
+          <select id="periodFilter"
+            class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white">
+            <option value="daily">Harian</option>
+            <option value="weekly">Mingguan</option>
+            <option value="monthly">Bulanan</option>
+          </select>
+        </div>
+
+        <div id="dailyDateField">
+          <label for="dateFilter" class="mb-2 block text-sm text-slate-300">
+            Tanggal Acuan
+          </label>
+          <input id="dateFilter" type="date"
+            class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white">
+        </div>
+
+        <div id="monthlyField" class="hidden">
+          <label for="monthFilter" class="mb-2 block text-sm text-slate-300">
+            Bulan
+          </label>
+          <input id="monthFilter" type="month"
+            class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white">
+        </div>
+
+        <div>
+          <label for="searchInput" class="mb-2 block text-sm text-slate-300">
+            Cari Karyawan
+          </label>
+          <input id="searchInput" type="search" autocomplete="off"
+            placeholder="Masukkan nama..."
+            class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white">
+        </div>
+
+        <div class="flex items-end gap-2">
+          <button id="resetFilterBtn" type="button"
+            class="flex-1 rounded-xl border border-slate-700 px-3 py-3 text-sm font-semibold hover:bg-slate-800">
+            Reset
+          </button>
+          <button id="refreshBtn" type="button"
+            class="flex-1 rounded-xl bg-emerald-600 px-3 py-3 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50">
+            Muat Ulang
+          </button>
+        </div>
+
+      </div>
+
+      <p id="pageMessage" role="status" aria-live="polite"
+         class="mt-4 text-sm text-slate-400">
+        Memeriksa akses Admin...
+      </p>
+    </section>
+
+    <!-- Rekap per karyawan -->
+    <section class="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
+      <div class="border-b border-slate-800 p-5">
+        <h3 class="font-bold">Rekap per Karyawan</h3>
+        <p class="mt-1 text-sm text-slate-400">
+          Jumlah tanggal berbeda ketika karyawan berstatus hadir.
+        </p>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[650px] text-left text-sm">
+          <thead class="bg-slate-950 text-xs uppercase text-slate-400">
+            <tr>
+              <th class="px-5 py-4">No.</th>
+              <th class="px-5 py-4">Nama Karyawan</th>
+              <th class="px-5 py-4">Jabatan</th>
+              <th class="px-5 py-4">Hari Hadir</th>
+              <th class="px-5 py-4">Tanggal Kehadiran</th>
+            </tr>
+          </thead>
+          <tbody id="summaryTableBody" class="divide-y divide-slate-800">
+            <tr>
+              <td colspan="5" class="px-5 py-8 text-center text-slate-400">
+                Memuat data...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Detail absensi -->
+    <section class="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
+      <div class="border-b border-slate-800 p-5">
+        <h3 class="font-bold">Daftar Kehadiran</h3>
+        <p class="mt-1 text-sm text-slate-400">
+          Koreksi waktu atau status dengan tombol Koreksi.
+        </p>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[1050px] text-left text-sm">
+          <thead class="bg-slate-950 text-xs uppercase text-slate-400">
+            <tr>
+              <th class="px-5 py-4">No.</th>
+              <th class="px-5 py-4">Nama Karyawan</th>
+              <th class="px-5 py-4">Jabatan</th>
+              <th class="px-5 py-4">Tanggal</th>
+              <th class="px-5 py-4">Waktu Absen</th>
+              <th class="px-5 py-4">Status</th>
+              <th class="px-5 py-4">Lokasi GPS</th>
+              <th class="px-5 py-4">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="attendanceTableBody" class="divide-y divide-slate-800">
+            <tr>
+              <td colspan="8" class="px-5 py-10 text-center text-slate-400">
+                Memuat data absensi...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="border-t border-slate-800 p-4 text-xs leading-5 text-slate-500">
+        Koreksi waktu dan status dicatat dengan UID Admin dan waktu perubahan.
+        Tanggal absensi tidak diubah oleh formulir koreksi ini.
+      </div>
+    </section>
+
+    <footer class="border-t border-slate-800 py-5 text-center text-xs text-slate-500">
+      Absensi Karyawan · Panel Administrator
+    </footer>
+
+  </main>
+
+  <script type="module" src="./js/attendance.js"></script>
+</body>
+</html>

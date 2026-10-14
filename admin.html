@@ -1,0 +1,233 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f172a">
+
+  <title>Dashboard Admin | Absensi Karyawan</title>
+  <link href="./dist/output.css" rel="stylesheet">
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-100">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-20 border-b border-slate-800 bg-slate-950/95 backdrop-blur">
+    <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
+
+      <div class="flex min-w-0 items-center gap-3">
+        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-xl">
+          ✓
+        </div>
+
+        <div class="min-w-0">
+          <p class="text-xs font-medium uppercase tracking-wider text-blue-400">
+            Absensi Karyawan
+          </p>
+          <h1 class="truncate text-lg font-bold sm:text-xl">
+            Dashboard Admin
+          </h1>
+        </div>
+      </div>
+
+      <button
+        id="logoutBtn"
+        type="button"
+        class="shrink-0 rounded-xl border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-800 sm:px-4"
+      >
+        Keluar
+      </button>
+
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-6xl space-y-7 px-4 py-6 sm:px-6 sm:py-8">
+
+    <!-- Welcome -->
+    <section class="relative overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-br from-blue-950 via-slate-900 to-slate-900 p-5 sm:p-7">
+
+      <div class="relative z-10">
+        <p class="text-sm text-slate-400">
+          Selamat datang kembali,
+        </p>
+
+        <h2
+          id="adminName"
+          class="mt-2 break-words text-2xl font-bold sm:text-3xl"
+        >
+          Administrator
+        </h2>
+
+        <p
+          id="adminEmail"
+          class="mt-2 break-all text-sm text-slate-400"
+        ></p>
+
+        <div class="mt-5 inline-flex items-center gap-2 rounded-full border border-emerald-800 bg-emerald-950/70 px-3 py-2 text-xs font-medium text-emerald-300">
+          <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+          Admin terverifikasi
+        </div>
+      </div>
+
+      <div class="pointer-events-none absolute -right-10 -top-12 h-48 w-48 rounded-full bg-blue-600/10 blur-3xl"></div>
+
+    </section>
+
+    <!-- Menu Pengelolaan -->
+    <section>
+
+      <div class="mb-4">
+        <h2 class="text-xl font-bold">
+          Menu Pengelolaan
+        </h2>
+
+        <p class="mt-1 text-sm text-slate-400">
+          Kelola data karyawan, absensi, lembur, penggajian, dan laporan.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+
+        <!-- Data Karyawan -->
+        <article class="flex flex-col rounded-2xl border border-slate-800 bg-slate-900 p-5 transition hover:border-blue-700">
+
+          <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-950 text-2xl">
+            👥
+          </div>
+
+          <h3 class="text-base font-bold">
+            Data Karyawan
+          </h3>
+
+          <p class="mt-2 flex-1 text-sm leading-6 text-slate-400">
+            Kelola profil, akun login, status aktif, jabatan, dan gaji harian karyawan.
+          </p>
+
+          <a
+            href="./employees.html"
+            class="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-500"
+          >
+            Buka Data Karyawan
+          </a>
+
+        </article>
+
+        <!-- Rekap Absensi -->
+        <article class="flex flex-col rounded-2xl border border-emerald-900/60 bg-slate-900 p-5 transition hover:border-emerald-600">
+
+          <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-950 text-2xl">
+            📍
+          </div>
+
+          <h3 class="text-base font-bold">
+            Rekap Absensi
+          </h3>
+
+          <p class="mt-2 flex-1 text-sm leading-6 text-slate-400">
+            Lihat rekap harian, mingguan, dan bulanan, termasuk waktu absensi serta koordinat GPS.
+          </p>
+
+          <a
+            href="./attendance.html"
+            class="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500"
+          >
+            Buka Rekap Absensi
+          </a>
+
+        </article>
+
+        <!-- Lembur -->
+        <article class="flex flex-col rounded-2xl border border-amber-900/60 bg-slate-900 p-5 transition hover:border-amber-600">
+
+          <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-amber-950 text-2xl">
+            ⏱️
+          </div>
+
+          <h3 class="text-base font-bold">
+            Lembur
+          </h3>
+
+          <p class="mt-2 flex-1 text-sm leading-6 text-slate-400">
+            Catat jam lembur, tarif per jam, dan total upah lembur karyawan.
+          </p>
+
+          <a
+            href="./overtime.html"
+            class="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-amber-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-500"
+          >
+            Buka Data Lembur
+          </a>
+
+        </article>
+
+        <!-- Penggajian -->
+        <article class="flex flex-col rounded-2xl border border-violet-900/60 bg-slate-900 p-5 transition hover:border-violet-600">
+
+          <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-violet-950 text-2xl">
+            💰
+          </div>
+
+          <h3 class="text-base font-bold">
+            Penggajian
+          </h3>
+
+          <p class="mt-2 flex-1 text-sm leading-6 text-slate-400">
+            Hitung dan simpan gaji berdasarkan hari hadir, gaji harian, lembur, dan periode pembayaran.
+          </p>
+
+          <a
+            href="./payroll.html"
+            class="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-500"
+          >
+            Buka Penggajian
+          </a>
+
+        </article>
+
+        <!-- Laporan PDF -->
+        <article class="flex flex-col rounded-2xl border border-rose-900/60 bg-slate-900 p-5 transition hover:border-rose-600">
+
+          <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-rose-950 text-2xl">
+            📄
+          </div>
+
+          <h3 class="text-base font-bold">
+            Laporan PDF
+          </h3>
+
+          <p class="mt-2 flex-1 text-sm leading-6 text-slate-400">
+            Buat laporan absensi, lembur, dan penggajian berdasarkan periode dan karyawan.
+          </p>
+
+          <a
+            href="./reports.html"
+            class="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-500"
+          >
+            Buka Laporan PDF
+          </a>
+
+        </article>
+
+      </div>
+    </section>
+
+    <!-- Pesan -->
+    <p
+      id="pageMessage"
+      role="status"
+      aria-live="polite"
+      class="hidden rounded-xl border border-red-900 bg-red-950 p-4 text-sm text-red-200"
+    ></p>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 py-5 text-center text-xs text-slate-500">
+      Absensi Karyawan · Panel Administrator
+    </footer>
+
+  </main>
+
+  <script type="module" src="./js/admin.js"></script>
+
+</body>
+</html>

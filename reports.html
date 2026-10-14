@@ -1,0 +1,458 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f172a">
+
+  <title>Laporan PDF | Absensi Karyawan</title>
+
+  <link href="./dist/output.css" rel="stylesheet">
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-100">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-20 border-b border-slate-800 bg-slate-950/95 backdrop-blur">
+    <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
+
+      <div class="flex min-w-0 items-center gap-3">
+        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rose-600 text-xl">
+          📄
+        </div>
+
+        <div class="min-w-0">
+          <p class="text-xs font-medium uppercase tracking-wider text-rose-400">
+            Absensi Karyawan
+          </p>
+
+          <h1 class="truncate text-lg font-bold sm:text-xl">
+            Laporan PDF
+          </h1>
+        </div>
+      </div>
+
+      <a
+        href="./admin.html"
+        class="shrink-0 rounded-xl border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-800 sm:px-4"
+      >
+        ← Dashboard
+      </a>
+
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-6xl space-y-7 px-4 py-6 sm:px-6 sm:py-8">
+
+    <!-- Intro -->
+    <section class="relative overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-br from-rose-950 via-slate-900 to-slate-900 p-5 sm:p-7">
+
+      <div class="relative z-10">
+        <p class="text-sm text-slate-400">
+          Panel Administrator
+        </p>
+
+        <h2 class="mt-2 text-2xl font-bold sm:text-3xl">
+          Pusat Laporan
+        </h2>
+
+        <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+          Buat dan unduh laporan absensi, lembur, serta penggajian
+          berdasarkan periode dan karyawan yang dipilih.
+        </p>
+
+        <div class="mt-5 inline-flex items-center gap-2 rounded-full border border-rose-900 bg-rose-950/60 px-3 py-2 text-xs font-medium text-rose-300">
+          <span class="h-2 w-2 rounded-full bg-rose-400"></span>
+          Laporan Administrator
+        </div>
+      </div>
+
+      <div class="pointer-events-none absolute -right-10 -top-12 h-48 w-48 rounded-full bg-rose-600/10 blur-3xl"></div>
+
+    </section>
+
+    <!-- Filter -->
+    <section class="rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:p-6">
+
+      <div class="mb-5">
+        <h3 class="text-lg font-bold">
+          Pengaturan Laporan
+        </h3>
+
+        <p class="mt-1 text-sm leading-6 text-slate-400">
+          Tentukan jenis laporan, periode tanggal, dan karyawan.
+        </p>
+      </div>
+
+      <form id="reportForm" class="space-y-5">
+
+        <!-- Jenis laporan -->
+        <div>
+          <label
+            for="reportType"
+            class="mb-2 block text-sm font-medium text-slate-300"
+          >
+            Jenis Laporan
+          </label>
+
+          <select
+            id="reportType"
+            required
+            class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20"
+          >
+            <option value="all">Laporan Lengkap</option>
+            <option value="attendance">Rekap Absensi</option>
+            <option value="overtime">Rekap Lembur</option>
+            <option value="payroll">Rekap Penggajian</option>
+          </select>
+        </div>
+
+        <!-- Periode -->
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+          <div>
+            <label
+              for="startDate"
+              class="mb-2 block text-sm font-medium text-slate-300"
+            >
+              Tanggal Awal
+            </label>
+
+            <input
+              type="date"
+              id="startDate"
+              required
+              class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20"
+            >
+          </div>
+
+          <div>
+            <label
+              for="endDate"
+              class="mb-2 block text-sm font-medium text-slate-300"
+            >
+              Tanggal Akhir
+            </label>
+
+            <input
+              type="date"
+              id="endDate"
+              required
+              class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20"
+            >
+          </div>
+
+        </div>
+
+        <!-- Karyawan -->
+        <div>
+          <label
+            for="employeeFilter"
+            class="mb-2 block text-sm font-medium text-slate-300"
+          >
+            Karyawan
+          </label>
+
+          <select
+            id="employeeFilter"
+            class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20"
+          >
+            <option value="all">Semua karyawan</option>
+          </select>
+
+          <p class="mt-2 text-xs leading-5 text-slate-500">
+            Pilih semua karyawan atau satu karyawan tertentu.
+          </p>
+        </div>
+
+        <!-- Tombol -->
+        <div class="flex flex-col gap-3 border-t border-slate-800 pt-5 sm:flex-row">
+
+          <button
+            type="submit"
+            id="previewButton"
+            class="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Tampilkan Laporan
+          </button>
+
+          <button
+            type="button"
+            id="resetButton"
+            class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-300 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Reset Filter
+          </button>
+
+        </div>
+
+      </form>
+
+    </section>
+
+    <!-- Status -->
+    <section
+      id="pageMessage"
+      role="status"
+      aria-live="polite"
+      class="hidden rounded-xl border border-slate-700 bg-slate-900 p-4 text-sm text-slate-300"
+    ></section>
+
+    <!-- Ringkasan -->
+    <section>
+
+      <div class="mb-4">
+        <h3 class="text-xl font-bold">
+          Ringkasan Laporan
+        </h3>
+
+        <p
+          id="periodLabel"
+          class="mt-1 text-sm text-slate-400"
+        >
+          Pilih periode untuk menampilkan laporan.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
+        <!-- Karyawan -->
+        <article class="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+          <div class="flex items-center justify-between gap-3">
+            <p class="text-sm text-slate-400">
+              Jumlah Karyawan
+            </p>
+
+            <span class="text-xl">👥</span>
+          </div>
+
+          <p
+            id="totalEmployees"
+            class="mt-4 text-3xl font-bold text-blue-400"
+          >
+            -
+          </p>
+
+          <p class="mt-2 text-xs text-slate-500">
+            Karyawan dalam hasil laporan
+          </p>
+        </article>
+
+        <!-- Absensi -->
+        <article class="rounded-2xl border border-emerald-900/60 bg-slate-900 p-5">
+          <div class="flex items-center justify-between gap-3">
+            <p class="text-sm text-slate-400">
+              Hari Hadir
+            </p>
+
+            <span class="text-xl">📍</span>
+          </div>
+
+          <p
+            id="totalAttendance"
+            class="mt-4 text-3xl font-bold text-emerald-400"
+          >
+            -
+          </p>
+
+          <p class="mt-2 text-xs text-slate-500">
+            Catatan berstatus hadir
+          </p>
+        </article>
+
+        <!-- Lembur -->
+        <article class="rounded-2xl border border-amber-900/60 bg-slate-900 p-5">
+          <div class="flex items-center justify-between gap-3">
+            <p class="text-sm text-slate-400">
+              Total Jam Lembur
+            </p>
+
+            <span class="text-xl">⏱️</span>
+          </div>
+
+          <p
+            id="totalOvertimeHours"
+            class="mt-4 text-3xl font-bold text-amber-400"
+          >
+            -
+          </p>
+
+          <p class="mt-2 text-xs text-slate-500">
+            Akumulasi jam lembur
+          </p>
+        </article>
+
+        <!-- Penggajian -->
+        <article class="rounded-2xl border border-violet-900/60 bg-slate-900 p-5">
+          <div class="flex items-center justify-between gap-3">
+            <p class="text-sm text-slate-400">
+              Total Penggajian
+            </p>
+
+            <span class="text-xl">💰</span>
+          </div>
+
+          <p
+            id="totalPayroll"
+            class="mt-4 break-words text-2xl font-bold text-violet-400"
+          >
+            -
+          </p>
+
+          <p class="mt-2 text-xs text-slate-500">
+            Berdasarkan snapshot payroll tersimpan
+          </p>
+        </article>
+
+      </div>
+
+    </section>
+
+    <!-- Pratinjau -->
+    <section class="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
+
+      <!-- Judul dan ekspor -->
+      <div class="flex flex-col gap-4 border-b border-slate-800 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+
+        <div>
+          <h3 class="text-lg font-bold">
+            Pratinjau Data
+          </h3>
+
+          <p class="mt-1 text-sm leading-6 text-slate-400">
+            Periksa hasil laporan sebelum mengunduh PDF.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          id="exportPdfButton"
+          disabled
+          class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <span>📄</span>
+          Ekspor PDF
+        </button>
+
+      </div>
+
+      <!-- Informasi -->
+      <div class="border-b border-slate-800 bg-slate-950/40 px-5 py-3">
+        <p class="text-xs leading-5 text-slate-500">
+          Data ditampilkan berdasarkan filter yang dipilih.
+          Pastikan periode laporan sudah benar.
+        </p>
+      </div>
+
+      <!-- Tabel -->
+      <div class="overflow-x-auto">
+
+        <table class="w-full min-w-[800px] text-left text-sm">
+
+          <thead
+            id="reportTableHead"
+            class="bg-slate-950/70 text-xs uppercase tracking-wider text-slate-400"
+          >
+            <tr>
+              <th class="px-5 py-4">Informasi</th>
+              <th class="px-5 py-4">Periode</th>
+              <th class="px-5 py-4">Keterangan</th>
+            </tr>
+          </thead>
+
+          <tbody
+            id="reportTableBody"
+            class="divide-y divide-slate-800"
+          >
+            <tr>
+              <td
+                colspan="3"
+                class="px-5 py-12 text-center text-slate-500"
+              >
+                <div class="mb-3 text-3xl">📊</div>
+
+                <p class="font-medium text-slate-400">
+                  Belum ada laporan
+                </p>
+
+                <p class="mt-2 text-xs">
+                  Pilih filter dan klik Tampilkan Laporan.
+                </p>
+              </td>
+            </tr>
+          </tbody>
+
+        </table>
+
+      </div>
+
+      <!-- Footer tabel -->
+      <div class="flex flex-col gap-2 border-t border-slate-800 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+
+        <p
+          id="recordCount"
+          class="text-xs text-slate-500"
+        >
+          0 catatan
+        </p>
+
+        <p class="text-xs text-slate-500">
+          Zona waktu: WIB (Asia/Jakarta)
+        </p>
+
+      </div>
+
+    </section>
+
+    <!-- Informasi -->
+    <section class="rounded-2xl border border-blue-900/50 bg-blue-950/30 p-5">
+
+      <div class="flex items-start gap-3">
+        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-900/50 text-xl">
+          ℹ️
+        </div>
+
+        <div>
+          <h3 class="font-semibold text-blue-300">
+            Informasi Laporan
+          </h3>
+
+          <ul class="mt-3 space-y-2 text-sm leading-6 text-slate-400">
+            <li>
+              • Laporan absensi berdasarkan catatan pada periode terpilih.
+            </li>
+
+            <li>
+              • Laporan lembur menggunakan data lembur yang tersimpan.
+            </li>
+
+            <li>
+              • Laporan penggajian memakai snapshot payroll tersimpan yang seluruh periodenya berada dalam rentang tanggal laporan.
+            </li>
+
+            <li>
+              • Mengekspor PDF tidak mengubah atau menghapus data sumber.
+            </li>
+          </ul>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 py-5 text-center text-xs text-slate-500">
+      Absensi Karyawan · Panel Administrator
+    </footer>
+
+  </main>
+
+<!-- Pustaka PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js"></script>
+
+<!-- Logika halaman -->
+<script type="module" src="./js/reports.js"></script>
+
+</body>
+</html>

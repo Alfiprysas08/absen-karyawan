@@ -1,0 +1,357 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#020617">
+  <title>Data Karyawan | Absensi Karyawan</title>
+  <link href="./dist/output.css" rel="stylesheet">
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-100">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-950">
+    <div class="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-4">
+      <div>
+        <p class="text-xs uppercase tracking-widest text-blue-400">
+          Absensi Karyawan
+        </p>
+        <h1 class="mt-1 text-xl font-bold">Data Karyawan</h1>
+      </div>
+
+      <a
+        href="./admin.html"
+        class="rounded-xl border border-slate-700 px-4 py-2 text-sm transition hover:bg-slate-800"
+      >
+        Kembali
+      </a>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-5xl space-y-6 px-4 py-6">
+
+    <!-- Judul dan tombol -->
+    <section class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      <div>
+        <h2 class="text-lg font-bold">Daftar Karyawan</h2>
+        <p class="mt-1 text-sm text-slate-400">
+          Kelola akun, jabatan, dan gaji harian karyawan.
+        </p>
+      </div>
+
+      <div class="flex flex-col gap-2 sm:flex-row">
+        <button
+          id="toggleFormBtn"
+          type="button"
+          class="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold transition hover:bg-blue-500"
+        >
+          + Tambah Karyawan
+        </button>
+
+        <button
+          id="refreshBtn"
+          type="button"
+          class="rounded-xl border border-slate-700 px-4 py-3 text-sm font-semibold transition hover:bg-slate-800"
+        >
+          Muat Ulang
+        </button>
+      </div>
+    </section>
+
+    <!-- Form Tambah Karyawan -->
+    <section
+      id="employeeFormSection"
+      class="hidden rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:p-6"
+    >
+      <div class="mb-6">
+        <p class="text-xs font-semibold uppercase tracking-widest text-blue-400">
+          Data Karyawan Baru
+        </p>
+        <h2 class="mt-2 text-xl font-bold">Tambah Karyawan</h2>
+        <p class="mt-2 text-sm text-slate-400">
+          Masukkan identitas, jabatan, dan gaji harian karyawan.
+        </p>
+      </div>
+
+      <form id="employeeForm" class="space-y-5">
+
+        <div>
+          <label for="employeeName" class="mb-2 block text-sm font-medium">
+            Nama Lengkap
+          </label>
+          <input
+            id="employeeName"
+            name="name"
+            type="text"
+            required
+            maxlength="100"
+            autocomplete="name"
+            placeholder="Masukkan nama lengkap"
+            class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none transition placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+          >
+        </div>
+
+        <div>
+          <label for="employeeEmail" class="mb-2 block text-sm font-medium">
+            Email Login
+          </label>
+          <input
+            id="employeeEmail"
+            name="email"
+            type="email"
+            required
+            autocomplete="email"
+            placeholder="karyawan@email.com"
+            class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none transition placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+          >
+          <p class="mt-2 text-xs text-slate-500">
+            Email digunakan untuk masuk ke aplikasi.
+          </p>
+        </div>
+
+        <div>
+          <label for="employeePassword" class="mb-2 block text-sm font-medium">
+            Password Awal
+          </label>
+          <input
+            id="employeePassword"
+            name="password"
+            type="password"
+            required
+            minlength="6"
+            autocomplete="new-password"
+            placeholder="Minimal 6 karakter"
+            class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none transition placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+          >
+          <p class="mt-2 text-xs text-slate-500">
+            Berikan password awal secara pribadi kepada karyawan.
+          </p>
+        </div>
+
+        <div>
+          <label for="employeePosition" class="mb-2 block text-sm font-medium">
+            Jabatan
+          </label>
+          <input
+            id="employeePosition"
+            name="position"
+            type="text"
+            required
+            maxlength="100"
+            placeholder="Contoh: Operator, Driver, Supervisor"
+            class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none transition placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+          >
+          <p class="mt-2 text-xs text-slate-500">
+            Jabatan dapat ditentukan sendiri oleh Admin.
+          </p>
+        </div>
+
+        <div>
+          <label for="dailySalary" class="mb-2 block text-sm font-medium">
+            Gaji Harian (Rp)
+          </label>
+          <div class="flex overflow-hidden rounded-xl border border-slate-700 bg-slate-950 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20">
+            <span class="flex items-center border-r border-slate-700 px-4 text-sm font-semibold text-slate-400">
+              Rp
+            </span>
+            <input
+              id="dailySalary"
+              name="dailySalary"
+              type="number"
+              required
+              min="0"
+              max="1000000000"
+              step="1"
+              inputmode="numeric"
+              placeholder="150000"
+              class="w-full min-w-0 bg-transparent px-4 py-3 text-sm outline-none placeholder:text-slate-500"
+            >
+          </div>
+          <p class="mt-2 text-xs text-slate-500">
+            Gaji ditentukan per karyawan. Jabatan yang sama boleh memiliki nominal berbeda.
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
+          <p class="text-sm font-semibold text-blue-300">
+            Informasi penggajian
+          </p>
+          <p class="mt-1 text-xs leading-relaxed text-slate-400">
+            Nominal ini merupakan gaji per hari kerja. Perhitungan akhir
+            akan mengikuti aturan kehadiran dan lembur yang ditetapkan.
+          </p>
+        </div>
+
+        <div class="flex flex-col gap-3 border-t border-slate-800 pt-5 sm:flex-row">
+          <button
+            id="saveEmployeeBtn"
+            type="submit"
+            class="flex-1 rounded-xl bg-blue-600 px-5 py-3 font-semibold transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Simpan Karyawan
+          </button>
+
+          <button
+            id="cancelFormBtn"
+            type="button"
+            class="rounded-xl border border-slate-700 px-5 py-3 font-semibold transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Batal
+          </button>
+        </div>
+
+        <p
+          id="formMessage"
+          role="status"
+          aria-live="polite"
+          class="hidden rounded-xl border border-slate-700 p-4 text-sm leading-relaxed"
+        ></p>
+      </form>
+    </section>
+
+    <!-- Form Edit Karyawan -->
+    <section
+      id="editEmployeeSection"
+      class="hidden rounded-2xl border border-amber-500/30 bg-slate-900 p-5 sm:p-6"
+    >
+      <div class="mb-6">
+        <p class="text-xs font-semibold uppercase tracking-widest text-amber-400">
+          Pengaturan Karyawan
+        </p>
+        <h2 class="mt-2 text-xl font-bold">Edit Karyawan</h2>
+        <p class="mt-2 text-sm text-slate-400">
+          Perbarui data karyawan tanpa membuat akun baru.
+        </p>
+      </div>
+
+      <form id="editEmployeeForm" class="space-y-5">
+        <input id="editEmployeeId" type="hidden">
+
+        <div>
+          <label for="editEmployeeName" class="mb-2 block text-sm font-medium">
+            Nama Lengkap
+          </label>
+          <input
+            id="editEmployeeName"
+            type="text"
+            maxlength="100"
+            required
+            class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+          >
+        </div>
+
+        <div>
+          <label for="editEmployeeEmail" class="mb-2 block text-sm font-medium">
+            Email Login
+          </label>
+          <input
+            id="editEmployeeEmail"
+            type="email"
+            readonly
+            class="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-500 outline-none"
+          >
+          <p class="mt-2 text-xs text-slate-500">
+            Email login tidak diubah melalui form ini.
+          </p>
+        </div>
+
+        <div>
+          <label for="editEmployeePosition" class="mb-2 block text-sm font-medium">
+            Jabatan
+          </label>
+          <input
+            id="editEmployeePosition"
+            type="text"
+            maxlength="100"
+            required
+            placeholder="Masukkan jabatan"
+            class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+          >
+        </div>
+
+        <div>
+          <label for="editDailySalary" class="mb-2 block text-sm font-medium">
+            Gaji Harian (Rp)
+          </label>
+          <div class="flex overflow-hidden rounded-xl border border-slate-700 bg-slate-950 focus-within:border-amber-500 focus-within:ring-2 focus-within:ring-amber-500/20">
+            <span class="flex items-center border-r border-slate-700 px-4 text-sm font-semibold text-slate-400">
+              Rp
+            </span>
+            <input
+              id="editDailySalary"
+              type="number"
+              min="0"
+              max="1000000000"
+              step="1"
+              required
+              placeholder="150000"
+              class="w-full min-w-0 bg-transparent px-4 py-3 text-sm outline-none placeholder:text-slate-500"
+            >
+          </div>
+          <p class="mt-2 text-xs text-slate-500">
+            Perubahan nominal berlaku pada profil karyawan. Payroll periode
+            sebelumnya nantinya perlu menggunakan data gaji yang telah disimpan untuk periode tersebut.
+          </p>
+        </div>
+
+        <div class="flex flex-col gap-3 border-t border-slate-800 pt-5 sm:flex-row">
+          <button
+            id="updateEmployeeBtn"
+            type="submit"
+            class="flex-1 rounded-xl bg-amber-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Simpan Perubahan
+          </button>
+
+          <button
+            id="cancelEditBtn"
+            type="button"
+            class="rounded-xl border border-slate-700 px-5 py-3 font-semibold transition hover:bg-slate-800"
+          >
+            Batal
+          </button>
+        </div>
+
+        <p
+          id="editFormMessage"
+          role="status"
+          aria-live="polite"
+          class="hidden rounded-xl border border-slate-700 p-4 text-sm leading-relaxed"
+        ></p>
+      </form>
+    </section>
+
+    <!-- Status Daftar -->
+    <section aria-label="Status data karyawan">
+      <p
+        id="status"
+        role="status"
+        aria-live="polite"
+        class="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm leading-relaxed text-slate-300"
+      >
+        Memuat data karyawan...
+      </p>
+    </section>
+
+    <!-- Daftar Karyawan -->
+    <section aria-label="Daftar karyawan">
+      <div
+        id="employeeList"
+        class="grid grid-cols-1 gap-4 sm:grid-cols-2"
+      ></div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 pt-5 text-center">
+      <p class="text-xs text-slate-500">
+        Absensi Karyawan · Pengelolaan Data Karyawan
+      </p>
+    </footer>
+
+  </main>
+
+  <script type="module" src="./js/employees-page.js"></script>
+</body>
+</html>

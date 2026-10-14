@@ -1,0 +1,195 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | Absensi Karyawan</title>
+  <link href="./dist/output.css" rel="stylesheet">
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex items-center justify-center p-5">
+
+  <main class="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-8 shadow-xl">
+
+    <div class="mb-8 text-center">
+      <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-2xl">
+        ✓
+      </div>
+      <h1 class="text-2xl font-bold">Absensi Karyawan</h1>
+      <p class="mt-2 text-sm text-slate-400">
+        Silakan masuk ke akun Anda
+      </p>
+    </div>
+
+    <form id="loginForm" class="space-y-5">
+
+      <div>
+        <label for="email" class="mb-2 block text-sm font-medium">
+          Email
+        </label>
+        <input
+          id="email"
+          type="email"
+          autocomplete="username"
+          required
+          placeholder="admin@gmail.com"
+          class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 outline-none transition focus:border-blue-500"
+        >
+      </div>
+
+      <div>
+        <label for="password" class="mb-2 block text-sm font-medium">
+          Password
+        </label>
+        <input
+          id="password"
+          type="password"
+          autocomplete="current-password"
+          required
+          placeholder="Masukkan password"
+          class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 outline-none transition focus:border-blue-500"
+        >
+      </div>
+
+      <p
+        id="message"
+        role="alert"
+        class="hidden rounded-lg bg-red-950 p-3 text-sm text-red-300"
+      ></p>
+
+      <button
+        id="loginButton"
+        type="submit"
+        class="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        Masuk
+      </button>
+
+    </form>
+
+    <p class="mt-6 text-center text-xs text-slate-500">
+      Akun dikelola oleh Administrator.
+    </p>
+
+  </main>
+
+  <script type="module">
+    import { auth, db } from "./js/firebase.js";
+
+    import {
+      signInWithEmailAndPassword,
+      onAuthStateChanged,
+      signOut
+    } from "firebase/auth";
+
+    import {
+      doc,
+      getDoc
+    } from "firebase/firestore";
+
+    const form = document.getElementById("loginForm");
+    const message = document.getElementById("message");
+    const button = document.getElementById("loginButton");
+
+    function showMessage(text) {
+      message.textContent = text;
+      message.classList.remove("hidden");
+    }
+
+    function getDashboard(role) {
+      if (role === "admin") return "./admin.html";
+      if (role === "user") return "./user.html";
+      return null;
+    }
+
+    async function checkProfile(firebaseUser) {
+      const profileRef = doc(db, "users", firebaseUser.uid);
+      const profileSnap = await getDoc(profileRef);
+
+      if (!profileSnap.exists()) {
+        throw new Error("Profil akun belum terdaftar.");
+      }
+
+      const profile = profileSnap.data();
+
+      if (profile.isActive !== true) {
+        throw new Error("Akun tidak aktif. Hubungi Admin.");
+      }
+
+      const dashboard = getDashboard(profile.role);
+
+      if (!dashboard) {
+        throw new Error("Role akun tidak valid.");
+      }
+
+      return dashboard;
+    }
+
+    // Jika sudah login, periksa role sebelum mengarahkan halaman.
+    onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!firebaseUser) return;
+
+      try {
+        const dashboard = await checkProfile(firebaseUser);
+        window.location.replace(dashboard);
+      } catch (error) {
+        console.error("Pemeriksaan profil:", error);
+
+        // Akun tetap login agar kesalahan jaringan sementara
+        // tidak langsung mengeluarkan pengguna.
+        showMessage(
+          "Profil belum bisa diperiksa. Periksa koneksi dan Firestore Rules."
+        );
+      }
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      button.disabled = true;
+      button.textContent = "Memeriksa...";
+      message.classList.add("hidden");
+
+      try {
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+
+        const credential = await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+        const dashboard = await checkProfile(credential.user);
+        window.location.replace(dashboard);
+
+      } catch (error) {
+        console.error("Login error:", error);
+
+        const errors = {
+          "auth/invalid-credential": "Email atau password salah.",
+          "auth/invalid-email": "Format email tidak valid.",
+          "auth/too-many-requests": "Terlalu banyak percobaan. Coba lagi nanti.",
+          "permission-denied": "Akses Firestore ditolak. Periksa Security Rules."
+        };
+
+        if (error.message === "Profil akun belum terdaftar." ||
+            error.message === "Akun tidak aktif. Hubungi Admin." ||
+            error.message === "Role akun tidak valid.") {
+          await signOut(auth);
+        }
+
+        showMessage(
+          errors[error.code] || error.message || "Login gagal."
+        );
+
+      } finally {
+        button.disabled = false;
+        button.textContent = "Masuk";
+      }
+    });
+  </script>
+
+</body>
+</html>

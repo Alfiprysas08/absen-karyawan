@@ -1,0 +1,197 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#020617">
+
+  <title>Data Lembur | Absensi Karyawan</title>
+  <link href="./dist/output.css" rel="stylesheet">
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-100">
+
+  <main class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+
+    <!-- Header -->
+    <header class="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <a href="./admin.html"
+          class="mb-3 inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white">
+          ← Kembali ke Dashboard
+        </a>
+
+        <h1 class="text-2xl font-bold sm:text-3xl">Data Lembur</h1>
+
+        <p class="mt-2 text-sm text-slate-400">
+          Kelola jam lembur dan perhitungan upah karyawan.
+        </p>
+      </div>
+
+      <div class="min-w-48 rounded-2xl border border-emerald-900 bg-slate-900 p-4">
+        <p class="text-xs text-slate-400">Total Upah Terfilter</p>
+        <p id="totalOvertime"
+          class="mt-2 text-xl font-bold text-emerald-400">
+          Rp0
+        </p>
+      </div>
+    </header>
+
+    <!-- Pesan -->
+    <div id="pageMessage"
+      role="status"
+      aria-live="polite"
+      class="hidden rounded-xl border p-4 text-sm">
+    </div>
+
+    <!-- Form -->
+    <section class="rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:p-6">
+
+      <div class="mb-6">
+        <h2 id="formTitle" class="text-xl font-bold">
+          Tambah Data Lembur
+        </h2>
+        <p class="mt-1 text-sm text-slate-400">
+          Masukkan data lembur sesuai catatan perusahaan.
+        </p>
+      </div>
+
+      <form id="overtimeForm" class="grid grid-cols-1 gap-5 md:grid-cols-2">
+
+        <div>
+          <label for="employeeId" class="mb-2 block text-sm font-medium">
+            Nama Karyawan
+          </label>
+
+          <select id="employeeId" required
+            class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none focus:border-blue-500">
+            <option value="">Memuat karyawan...</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="dateKey" class="mb-2 block text-sm font-medium">
+            Tanggal Lembur
+          </label>
+
+          <input id="dateKey" type="date" required
+            class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none focus:border-blue-500">
+        </div>
+
+        <div>
+          <label for="hours" class="mb-2 block text-sm font-medium">
+            Jumlah Jam Lembur
+          </label>
+
+          <input id="hours" type="number" min="0.5" max="24" step="0.5"
+            placeholder="Contoh: 2" required
+            class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none focus:border-blue-500">
+        </div>
+
+        <div>
+          <label for="hourlyRate" class="mb-2 block text-sm font-medium">
+            Tarif per Jam (Rp)
+          </label>
+
+          <input id="hourlyRate" type="number" min="1" step="1"
+            placeholder="Contoh: 25000" required
+            class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none focus:border-blue-500">
+        </div>
+
+        <div class="rounded-xl border border-emerald-900 bg-emerald-950/40 p-4 md:col-span-2">
+          <p class="text-sm text-emerald-300">Total Upah Lembur</p>
+          <p id="calculatedTotal"
+            class="mt-1 text-2xl font-bold text-emerald-400">
+            Rp0
+          </p>
+          <p class="mt-2 text-xs text-slate-400">
+            Perhitungan: jumlah jam × tarif per jam.
+          </p>
+        </div>
+
+        <div class="flex flex-wrap gap-3 md:col-span-2">
+          <button id="saveButton" type="submit"
+            class="min-h-11 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50">
+            Simpan Lembur
+          </button>
+
+          <button id="cancelEditButton" type="button"
+            class="hidden min-h-11 rounded-xl border border-slate-700 px-5 py-3 text-sm font-semibold hover:bg-slate-800">
+            Batal Edit
+          </button>
+        </div>
+
+      </form>
+    </section>
+
+    <!-- Riwayat -->
+    <section class="rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:p-6">
+
+      <div class="mb-5">
+        <h2 class="text-xl font-bold">Riwayat Lembur</h2>
+        <p class="mt-1 text-sm text-slate-400">
+          Cari, edit, dan hapus catatan lembur.
+        </p>
+      </div>
+
+      <div class="mb-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+        <input id="searchInput" type="search"
+          placeholder="Cari nama karyawan..."
+          class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none focus:border-blue-500">
+
+        <input id="filterDate" type="date"
+          aria-label="Filter tanggal lembur"
+          class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none focus:border-blue-500">
+
+        <button id="resetFilterButton" type="button"
+          class="rounded-xl border border-slate-700 px-4 py-3 text-sm font-semibold hover:bg-slate-800">
+          Reset Filter
+        </button>
+      </div>
+
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p id="recordCount" class="text-sm text-slate-400">
+          0 catatan
+        </p>
+
+        <button id="refreshButton" type="button"
+          class="rounded-lg border border-slate-700 px-4 py-2 text-sm hover:bg-slate-800">
+          Muat Ulang
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[850px] text-left text-sm">
+          <thead class="border-b border-slate-800 text-slate-400">
+            <tr>
+              <th class="px-3 py-4 font-medium">Tanggal</th>
+              <th class="px-3 py-4 font-medium">Nama Karyawan</th>
+              <th class="px-3 py-4 font-medium">Jam</th>
+              <th class="px-3 py-4 font-medium">Tarif/Jam</th>
+              <th class="px-3 py-4 font-medium">Total Upah</th>
+              <th class="px-3 py-4 font-medium">Aksi</th>
+            </tr>
+          </thead>
+
+          <tbody id="overtimeTableBody" class="divide-y divide-slate-800">
+            <tr>
+              <td colspan="6" class="px-3 py-8 text-center text-slate-400">
+                Memuat data lembur...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+    <footer class="border-t border-slate-800 py-5 text-center text-xs text-slate-500">
+      Absensi Karyawan · Modul Lembur
+    </footer>
+
+  </main>
+
+  <script type="module" src="./js/overtime.js"></script>
+</body>
+</html>
