@@ -4,11 +4,11 @@
   "version": "1.0.0",
   "description": "Aplikasi Absensi Karyawan",
   "scripts": {
-    "dev": "npx @tailwindcss/cli -i ./css/input.css -o ./dist/output.css --watch",
-    "start": "vite",
-    "build": "npm run build:css && vite build",
-    "build:css": "npx @tailwindcss/cli -i ./css/input.css -o ./dist/output.css"
-  },
+  "dev": "node ./node_modules/@tailwindcss/cli/dist/index.mjs -i ./css/input.css -o ./dist/output.css --watch",
+  "start": "vite",
+  "build": "npm run build:css && vite build",
+  "build:css": "node ./node_modules/@tailwindcss/cli/dist/index.mjs -i ./css/input.css -o ./dist/output.css"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
