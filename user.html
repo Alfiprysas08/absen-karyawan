@@ -5,6 +5,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#0f172a" />
+  <meta
+    name="description"
+    content="Portal absensi karyawan dengan GPS, riwayat kehadiran, dan informasi lembur."
+  />
   <title>Absensi Saya | Absensi Karyawan</title>
   <link rel="stylesheet" href="./dist/output.css" />
 </head>
@@ -18,7 +22,9 @@
         <p class="text-xs font-medium uppercase tracking-widest text-emerald-400">
           Employee Portal
         </p>
-        <h1 class="mt-1 text-lg font-bold sm:text-xl">Absensi Karyawan</h1>
+        <h1 class="mt-1 text-lg font-bold sm:text-xl">
+          Absensi Karyawan
+        </h1>
       </div>
 
       <button
@@ -37,11 +43,17 @@
     <section class="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-800 p-5 sm:p-7">
       <p class="text-sm text-slate-400">Selamat datang,</p>
 
-      <h2 id="employeeName" class="mt-1 text-2xl font-bold sm:text-3xl">
+      <h2
+        id="employeeName"
+        class="mt-1 text-2xl font-bold sm:text-3xl"
+      >
         Memuat nama...
       </h2>
 
-      <p id="employeePosition" class="mt-2 text-sm text-slate-400">
+      <p
+        id="employeePosition"
+        class="mt-2 text-sm text-slate-400"
+      >
         Memuat jabatan...
       </p>
 
@@ -61,14 +73,23 @@
 
     <!-- Tanggal dan Status Absensi -->
     <section class="grid gap-4 sm:grid-cols-2">
+
       <div class="rounded-2xl border border-slate-800 bg-slate-900 p-5">
         <p class="text-sm text-slate-400">Hari dan Tanggal</p>
-        <p id="todayDate" class="mt-2 text-lg font-semibold">Memuat tanggal...</p>
-        <p id="currentTime" class="mt-1 text-sm text-slate-400">Memuat waktu...</p>
+
+        <p id="todayDate" class="mt-2 text-lg font-semibold">
+          Memuat tanggal...
+        </p>
+
+        <p id="currentTime" class="mt-1 text-sm text-slate-400">
+          Memuat waktu...
+        </p>
       </div>
 
       <div class="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-        <p class="text-sm text-slate-400">Status Absensi Hari Ini</p>
+        <p class="text-sm text-slate-400">
+          Status Absensi Hari Ini
+        </p>
 
         <div class="mt-3 flex items-center gap-3">
           <span
@@ -77,9 +98,15 @@
             aria-hidden="true"
           >—</span>
 
-          <div>
-            <p id="attendanceStatus" class="font-semibold">Belum Absen</p>
-            <p id="attendanceTime" class="mt-1 text-xs text-slate-400">
+          <div class="min-w-0">
+            <p id="attendanceStatus" class="font-semibold">
+              Belum Absen
+            </p>
+
+            <p
+              id="attendanceTime"
+              class="mt-1 text-xs leading-5 text-slate-400"
+            >
               Silakan lakukan absensi hari ini.
             </p>
           </div>
@@ -87,32 +114,111 @@
       </div>
     </section>
 
-    <!-- Absensi GPS -->
+    <!-- Tahapan Absensi -->
     <section class="rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:p-7">
       <div>
-        <h2 class="text-lg font-bold sm:text-xl">Absensi Kehadiran</h2>
+        <p class="text-xs font-semibold uppercase tracking-widest text-emerald-400">
+          Attendance
+        </p>
+
+        <h2 class="mt-1 text-lg font-bold sm:text-xl">
+          Absensi Kehadiran
+        </h2>
+
         <p class="mt-2 text-sm leading-6 text-slate-400">
-          Tekan tombol di bawah untuk mencatat kehadiran. Browser akan meminta
-          izin lokasi agar koordinat GPS dicatat bersama waktu absensi.
+          Lakukan absensi secara berurutan. GPS wajib diaktifkan
+          dan koordinat harus berhasil diperoleh sebelum setiap
+          tahap absensi disimpan.
         </p>
       </div>
 
+      <!-- Daftar tahapan -->
+      <div class="mt-5 space-y-3">
+
+        <div class="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950 p-4">
+          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 font-semibold text-emerald-400">
+            1
+          </span>
+
+          <div class="min-w-0 flex-1">
+            <p class="font-medium">Absen Masuk</p>
+            <p class="text-xs text-slate-500">
+              Mencatat waktu mulai bekerja
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950 p-4">
+          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 font-semibold text-emerald-400">
+            2
+          </span>
+
+          <div class="min-w-0 flex-1">
+            <p class="font-medium">Absen Keluar</p>
+            <p class="text-xs text-slate-500">
+              Mencatat waktu selesai bekerja reguler
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950 p-4">
+          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 font-semibold text-sky-400">
+            3
+          </span>
+
+          <div class="min-w-0 flex-1">
+            <p class="font-medium">Absen Masuk Lembur</p>
+            <p class="text-xs text-slate-500">
+              Mencatat waktu mulai lembur
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950 p-4">
+          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 font-semibold text-sky-400">
+            4
+          </span>
+
+          <div class="min-w-0 flex-1">
+            <p class="font-medium">Absen Keluar Lembur</p>
+            <p class="text-xs text-slate-500">
+              Mencatat waktu selesai lembur
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Status GPS -->
       <div class="mt-5 rounded-xl border border-slate-800 bg-slate-950 p-4">
         <div class="flex items-start gap-3">
           <span class="text-xl" aria-hidden="true">📍</span>
 
           <div class="min-w-0">
-            <p class="font-medium">Lokasi GPS</p>
-            <p id="locationStatus" class="mt-1 break-words text-sm text-slate-400">
-              Lokasi belum diambil.
+            <div class="flex flex-wrap items-center gap-2">
+              <p class="font-medium">Lokasi GPS</p>
+
+              <span class="rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-400">
+                Wajib
+              </span>
+            </div>
+
+            <p
+              id="locationStatus"
+              class="mt-1 break-words text-sm leading-6 text-slate-400"
+            >
+              GPS belum diperiksa.
             </p>
+
             <p class="mt-2 text-xs leading-5 text-slate-500">
-              Lokasi digunakan untuk mencatat koordinat saat melakukan absensi.
+              Izinkan akses lokasi pada browser. Jika GPS tidak
+              berhasil diperoleh, tahap absensi tidak akan disimpan.
             </p>
           </div>
         </div>
       </div>
 
+      <!-- Tombol utama -->
       <div class="mt-5">
         <button
           id="attendanceBtn"
@@ -132,6 +238,36 @@
           Menyiapkan halaman absensi...
         </p>
       </div>
+
+      <!-- Pilihan tidak lembur -->
+      <div
+        id="noOvertimeSection"
+        class="mt-4 hidden rounded-xl border border-slate-700 bg-slate-950 p-4"
+      >
+        <h3 class="font-semibold">
+          Tidak melakukan lembur?
+        </h3>
+
+        <p class="mt-2 text-sm leading-6 text-slate-400">
+          Setelah absen keluar reguler, kamu dapat mengakhiri
+          absensi hari ini jika tidak melakukan lembur.
+        </p>
+
+        <button
+          id="noOvertimeBtn"
+          type="button"
+          class="mt-4 w-full rounded-xl border border-slate-700 px-4 py-3 font-medium text-slate-200 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Tidak Lembur
+        </button>
+
+        <p
+          id="noOvertimeMessage"
+          role="status"
+          aria-live="polite"
+          class="mt-2 text-sm leading-6 text-slate-400"
+        ></p>
+      </div>
     </section>
 
     <!-- Riwayat Absensi dan Lembur -->
@@ -140,16 +276,24 @@
         <p class="text-xs font-semibold uppercase tracking-widest text-emerald-400">
           Personal Report
         </p>
-        <h2 class="mt-1 text-xl font-bold">Riwayat Absensi & Lembur</h2>
+
+        <h2 class="mt-1 text-xl font-bold">
+          Riwayat Absensi &amp; Lembur
+        </h2>
+
         <p class="mt-2 text-sm text-slate-400">
           Periksa riwayat kehadiran dan jam lembur berdasarkan bulan.
         </p>
       </div>
 
       <div>
-        <label for="historyMonth" class="mb-2 block text-sm font-medium text-slate-300">
+        <label
+          for="historyMonth"
+          class="mb-2 block text-sm font-medium text-slate-300"
+        >
           Pilih bulan
         </label>
+
         <input
           id="historyMonth"
           type="month"
@@ -157,26 +301,47 @@
         />
       </div>
 
-      <p id="historyMessage" role="status" aria-live="polite" class="text-sm text-slate-400">
+      <p
+        id="historyMessage"
+        role="status"
+        aria-live="polite"
+        class="text-sm text-slate-400"
+      >
         Menunggu data...
       </p>
 
       <!-- Ringkasan -->
       <div class="grid grid-cols-2 gap-3">
+
         <div class="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
           <p class="text-sm text-slate-400">Total hadir</p>
-          <p id="historyPresent" class="mt-2 text-2xl font-bold text-emerald-400">0 hari</p>
+
+          <p
+            id="historyPresent"
+            class="mt-2 text-2xl font-bold text-emerald-400"
+          >
+            0 hari
+          </p>
         </div>
 
         <div class="rounded-xl border border-sky-500/20 bg-sky-500/5 p-4">
           <p class="text-sm text-slate-400">Total jam lembur</p>
-          <p id="historyOvertime" class="mt-2 text-2xl font-bold text-sky-400">0 jam</p>
+
+          <p
+            id="historyOvertime"
+            class="mt-2 text-2xl font-bold text-sky-400"
+          >
+            0 jam
+          </p>
         </div>
+
       </div>
 
       <!-- Kalender -->
       <div>
-        <h3 class="mb-3 font-semibold">Kalender Kehadiran</h3>
+        <h3 class="mb-3 font-semibold">
+          Kalender Kehadiran
+        </h3>
 
         <div class="grid grid-cols-7 gap-1 text-center text-xs text-slate-500">
           <div class="py-2">Min</div>
@@ -188,20 +353,39 @@
           <div class="py-2">Sab</div>
         </div>
 
-        <div id="historyCalendar" class="grid grid-cols-7 gap-1"></div>
+        <div
+          id="historyCalendar"
+          class="grid grid-cols-7 gap-1"
+        ></div>
 
         <div class="mt-3 flex flex-wrap gap-4 text-xs text-slate-400">
-          <span><span class="text-emerald-400">●</span> Hadir</span>
-          <span><span class="text-red-400">●</span> Tidak hadir</span>
-          <span><span class="text-slate-500">●</span> Belum ada catatan</span>
+          <span>
+            <span class="text-emerald-400">●</span>
+            Hadir
+          </span>
+
+          <span>
+            <span class="text-red-400">●</span>
+            Tidak hadir
+          </span>
+
+          <span>
+            <span class="text-slate-500">●</span>
+            Belum ada catatan
+          </span>
         </div>
       </div>
 
       <!-- Rincian Lembur -->
       <div>
-        <h3 class="mb-3 font-semibold">Rincian Lembur</h3>
+        <h3 class="mb-3 font-semibold">
+          Rincian Lembur
+        </h3>
+
         <div id="historyOvertimeList" class="space-y-2">
-          <p class="text-sm text-slate-400">Memuat data lembur...</p>
+          <p class="text-sm text-slate-400">
+            Memuat data lembur...
+          </p>
         </div>
       </div>
     </section>
@@ -211,29 +395,57 @@
       <h2 class="font-bold">Informasi Absensi</h2>
 
       <ul class="mt-4 space-y-3 text-sm leading-6 text-slate-400">
+
         <li class="flex gap-3">
           <span class="text-emerald-400">✓</span>
-          <span>Absensi dicatat berdasarkan tanggal dan waktu saat melakukan absensi.</span>
+          <span>
+            Absensi terdiri dari absen masuk, absen keluar,
+            masuk lembur, dan keluar lembur.
+          </span>
         </li>
+
         <li class="flex gap-3">
           <span class="text-emerald-400">✓</span>
-          <span>Koordinat GPS dicatat sebagai informasi lokasi absensi.</span>
+          <span>
+            GPS wajib diperoleh pada setiap tahap absensi.
+            Absensi tidak dapat dilanjutkan jika lokasi gagal diambil.
+          </span>
         </li>
+
         <li class="flex gap-3">
           <span class="text-emerald-400">✓</span>
-          <span>Satu akun hanya dapat melakukan satu absensi per tanggal.</span>
+          <span>
+            Setiap tahap harus dilakukan berurutan dan tidak
+            dapat dicatat dua kali.
+          </span>
         </li>
+
         <li class="flex gap-3">
           <span class="text-emerald-400">✓</span>
-          <span>Jika ada kesalahan pencatatan, hubungi Admin untuk pemeriksaan.</span>
+          <span>
+            Jika tidak lembur, gunakan pilihan Tidak Lembur
+            setelah absen keluar reguler.
+          </span>
         </li>
+
+        <li class="flex gap-3">
+          <span class="text-emerald-400">✓</span>
+          <span>
+            Jika terjadi kesalahan pencatatan, hubungi Admin
+            untuk pemeriksaan.
+          </span>
+        </li>
+
       </ul>
     </section>
 
     <footer class="pb-4 pt-2 text-center text-xs text-slate-500">
       <p>Absensi Karyawan</p>
-      <p class="mt-1">Sistem pencatatan kehadiran karyawan</p>
+      <p class="mt-1">
+        Sistem pencatatan kehadiran karyawan
+      </p>
     </footer>
+
   </main>
 
   <script type="module" src="./js/user.js"></script>

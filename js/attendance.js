@@ -9,6 +9,7 @@ import {
 import {
   collection,
   doc,
+  deleteDoc,
   getDoc,
   getDocs,
   updateDoc,
@@ -168,6 +169,27 @@ function showEmptyTable(tbody, colspan, message) {
 
   row.appendChild(cell);
   tbody.appendChild(row);
+}
+
+async function verifyActiveAdmin() {
+  const currentAdmin = auth.currentUser;
+
+  if (!currentAdmin) {
+    throw new Error("Sesi Admin sudah berakhir. Silakan login kembali.");
+  }
+
+  const adminRef = doc(db, "users", currentAdmin.uid);
+  const adminSnapshot = await getDoc(adminRef);
+
+  if (
+    !adminSnapshot.exists() ||
+    adminSnapshot.data().role !== "admin" ||
+    adminSnapshot.data().isActive !== true
+  ) {
+    throw new Error("Akun tidak memiliki akses Admin aktif.");
+  }
+
+  return currentAdmin;
 }
 
 // =====================================
@@ -452,6 +474,9 @@ function renderAttendanceDetails(data) {
     }
 
     const actionCell = addCell(row, "");
+    const actionWrapper = document.createElement("div");
+    actionWrapper.className = "flex flex-wrap gap-2";
+
     const editButton = document.createElement("button");
 
     editButton.type = "button";
@@ -463,7 +488,19 @@ function renderAttendanceDetails(data) {
       correctAttendance(item, editButton);
     });
 
-    actionCell.appendChild(editButton);
+    const deleteButton = document.createElement("button");
+
+    deleteButton.type = "button";
+    deleteButton.textContent = "Hapus";
+    deleteButton.className =
+      "rounded-lg border border-red-700 px-3 py-2 text-xs font-semibold text-red-300 transition hover:bg-red-950 disabled:opacity-50";
+
+    deleteButton.addEventListener("click", () => {
+      deleteAttendance(item, deleteButton);
+    });
+
+    actionWrapper.append(editButton, deleteButton);
+    actionCell.appendChild(actionWrapper);
     attendanceTableBody.appendChild(row);
   });
 }
@@ -532,22 +569,7 @@ async function correctAttendance(item, button) {
   button.textContent = "Menyimpan...";
 
   try {
-    const currentAdmin = auth.currentUser;
-
-    if (!currentAdmin) {
-      throw new Error("Sesi Admin sudah berakhir.");
-    }
-
-    const adminRef = doc(db, "users", currentAdmin.uid);
-    const adminSnapshot = await getDoc(adminRef);
-
-    if (
-      !adminSnapshot.exists() ||
-      adminSnapshot.data().role !== "admin" ||
-      adminSnapshot.data().isActive !== true
-    ) {
-      throw new Error("Akun tidak memiliki akses Admin aktif.");
-    }
+    const currentAdmin = await verifyActiveAdmin();
 
     const latestRef = doc(db, "attendance", item.id);
     const latestSnapshot = await getDoc(latestRef);
@@ -596,6 +618,83 @@ async function correctAttendance(item, button) {
   } finally {
     button.disabled = false;
     button.textContent = "Koreksi";
+  }
+}
+
+// =====================================
+// HAPUS ABSENSI
+// =====================================
+
+async function deleteAttendance(item, button) {
+  if (!isAuthorized || !auth.currentUser) {
+    showMessage("Sesi Admin tidak tersedia. Login kembali.", "error");
+    return;
+  }
+
+  if (button.disabled) return;
+
+  if (!item.id || !item.userId || !item.dateKey) {
+    showMessage("Data absensi tidak lengkap.", "error");
+    return;
+  }
+
+  const employeeName =
+    employeeData[item.userId]?.name || item.userId;
+  const attendanceDate = formatDate(item.dateKey);
+
+  const confirmed = confirm(
+    `Hapus permanen absensi ${employeeName}?\n\n` +
+    `Tanggal: ${attendanceDate}\n\n` +
+    `Data absensi akan dihapus dari Firestore dan tidak dapat dikembalikan. ` +
+    `Data penggajian yang sudah tersimpan tidak akan diubah.`
+  );
+
+  if (!confirmed) return;
+
+  button.disabled = true;
+  button.textContent = "Menghapus...";
+
+  try {
+    await verifyActiveAdmin();
+
+    const attendanceRef = doc(db, "attendance", item.id);
+    const latestSnapshot = await getDoc(attendanceRef);
+
+    if (!latestSnapshot.exists()) {
+      throw new Error("Catatan absensi sudah tidak ditemukan.");
+    }
+
+    const latest = latestSnapshot.data();
+
+    if (
+      latest.userId !== item.userId ||
+      latest.dateKey !== item.dateKey
+    ) {
+      throw new Error(
+        "Data berubah sejak terakhir dimuat. Muat ulang sebelum menghapus."
+      );
+    }
+
+    await deleteDoc(attendanceRef);
+    await loadAttendance();
+
+    showMessage(
+      `Absensi ${employeeName} pada ${attendanceDate} berhasil dihapus permanen.`,
+      "success"
+    );
+  } catch (error) {
+    console.error("Hapus absensi gagal:", error);
+    console.error("Kode error:", error.code);
+
+    showMessage(
+      error.code === "permission-denied"
+        ? "Hapus gagal: akses ditolak. Hanya Admin aktif yang boleh menghapus absensi."
+        : `Hapus gagal: ${error.code || error.message}`,
+      "error"
+    );
+  } finally {
+    button.disabled = false;
+    button.textContent = "Hapus";
   }
 }
 
