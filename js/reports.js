@@ -67,9 +67,7 @@ function getTodayKey() {
 }
 
 function formatDate(dateKey) {
-  if (!dateKey || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
-    return "-";
-  }
+  if (!isValidDateKey(dateKey)) return "-";
 
   const [year, month, day] = dateKey.split("-").map(Number);
 
@@ -82,13 +80,47 @@ function formatDate(dateKey) {
 }
 
 function formatPeriod(start, end) {
+  if (!start || !end) return "-";
+
   return start === end
     ? formatDate(start)
     : `${formatDate(start)} – ${formatDate(end)}`;
 }
 
+function isValidDateKey(value) {
+  if (
+    typeof value !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(value)
+  ) {
+    return false;
+  }
+
+  const date = new Date(`${value}T12:00:00Z`);
+
+  return (
+    !Number.isNaN(date.getTime()) &&
+    date.toISOString().slice(0, 10) === value
+  );
+}
+
+function validDateRange(start, end) {
+  return (
+    isValidDateKey(start) &&
+    isValidDateKey(end) &&
+    start <= end
+  );
+}
+
+function inRange(dateKey, start, end) {
+  return (
+    isValidDateKey(dateKey) &&
+    dateKey >= start &&
+    dateKey <= end
+  );
+}
+
 function showMessage(message, type = "info") {
-  pageMessage.textContent = message;
+  if (!pageMessage) return;
 
   const styles = {
     info: "border-slate-700 bg-slate-900 text-slate-300",
@@ -96,6 +128,7 @@ function showMessage(message, type = "info") {
     error: "border-red-800 bg-red-950/50 text-red-300"
   };
 
+  pageMessage.textContent = message;
   pageMessage.className =
     `rounded-xl border p-4 text-sm ${styles[type] || styles.info}`;
 
@@ -104,6 +137,7 @@ function showMessage(message, type = "info") {
 
 function setBusy(value) {
   busy = value;
+
   previewButton.disabled = value;
   resetButton.disabled = value;
   exportPdfButton.disabled = value || !currentReport;
@@ -146,6 +180,8 @@ function resetSummary() {
 }
 
 function renderEmployeeOptions() {
+  const previousValue = employeeFilter.value || "all";
+
   employeeFilter.replaceChildren();
 
   const allOption = document.createElement("option");
@@ -156,7 +192,10 @@ function renderEmployeeOptions() {
   employees
     .filter((employee) => employee.isActive === true)
     .sort((a, b) =>
-      String(a.name || "").localeCompare(String(b.name || ""), "id")
+      String(a.name || "").localeCompare(
+        String(b.name || ""),
+        "id"
+      )
     )
     .forEach((employee) => {
       const option = document.createElement("option");
@@ -167,36 +206,12 @@ function renderEmployeeOptions() {
 
       employeeFilter.appendChild(option);
     });
-}
 
-function validDateRange(start, end) {
-  if (
-    !start ||
-    !end ||
-    !/^\d{4}-\d{2}-\d{2}$/.test(start) ||
-    !/^\d{4}-\d{2}-\d{2}$/.test(end) ||
-    start > end
-  ) {
-    return false;
-  }
-
-  const startDate = new Date(`${start}T12:00:00Z`);
-  const endDate = new Date(`${end}T12:00:00Z`);
-
-  return (
-    !Number.isNaN(startDate.getTime()) &&
-    !Number.isNaN(endDate.getTime()) &&
-    startDate.toISOString().slice(0, 10) === start &&
-    endDate.toISOString().slice(0, 10) === end
+  const optionExists = [...employeeFilter.options].some(
+    (option) => option.value === previousValue
   );
-}
 
-function inRange(dateKey, start, end) {
-  return (
-    typeof dateKey === "string" &&
-    dateKey >= start &&
-    dateKey <= end
-  );
+  employeeFilter.value = optionExists ? previousValue : "all";
 }
 
 function employeeName(userId) {
@@ -216,6 +231,35 @@ function selectedEmployeeName() {
   }
 
   return employeeName(employeeFilter.value);
+}
+
+function filterEmployee(records) {
+  if (employeeFilter.value === "all") {
+    return records;
+  }
+
+  return records.filter(
+    (item) => item.userId === employeeFilter.value
+  );
+}
+
+// Hanya lembur yang sudah disetujui admin dan terhubung
+// dengan satu dokumen absensi yang diperhitungkan.
+function isApprovedOvertime(item) {
+  return (
+    item.status === "approved" &&
+    typeof item.attendanceId === "string" &&
+    item.attendanceId.length > 0 &&
+    typeof item.userId === "string" &&
+    item.userId.length > 0 &&
+    isValidDateKey(item.dateKey) &&
+    Number.isFinite(Number(item.hours)) &&
+    Number(item.hours) > 0 &&
+    Number.isFinite(Number(item.hourlyRate)) &&
+    Number(item.hourlyRate) >= 0 &&
+    Number.isFinite(Number(item.total)) &&
+    Number(item.total) >= 0
+  );
 }
 
 async function loadSourceData() {
@@ -254,16 +298,6 @@ async function loadSourceData() {
   renderEmployeeOptions();
 }
 
-function filterEmployee(records) {
-  if (employeeFilter.value === "all") {
-    return records;
-  }
-
-  return records.filter(
-    (item) => item.userId === employeeFilter.value
-  );
-}
-
 function buildReport(start, end, type) {
   const attendance = filterEmployee(
     attendanceRecords.filter((item) =>
@@ -272,20 +306,24 @@ function buildReport(start, end, type) {
   );
 
   const overtime = filterEmployee(
-    overtimeRecords.filter((item) =>
-      inRange(item.dateKey, start, end)
+    overtimeRecords.filter(
+      (item) =>
+        isApprovedOvertime(item) &&
+        inRange(item.dateKey, start, end)
     )
   );
 
-  // Payroll menggunakan snapshot tersimpan.
-  // Payroll hanya masuk jika seluruh periode payroll berada
-  // di dalam rentang laporan yang dipilih.
+  // Payroll tetap menggunakan snapshot yang sudah tersimpan.
+  // Snapshot hanya masuk jika seluruh periodenya berada
+  // di dalam rentang tanggal laporan.
   const payroll = filterEmployee(
-    payrollRecords.filter((item) =>
-      item.periodStart &&
-      item.periodEnd &&
-      item.periodStart >= start &&
-      item.periodEnd <= end
+    payrollRecords.filter(
+      (item) =>
+        isValidDateKey(item.periodStart) &&
+        isValidDateKey(item.periodEnd) &&
+        item.periodStart <= item.periodEnd &&
+        item.periodStart >= start &&
+        item.periodEnd <= end
     )
   );
 
@@ -299,8 +337,19 @@ function buildReport(start, end, type) {
     ...payroll.map((item) => item.userId)
   ]);
 
+  employeeIds.delete(undefined);
+  employeeIds.delete(null);
+  employeeIds.delete("");
+
+  // hours adalah durasi resmi yang disetujui admin,
+  // bukan durasi aktual hasil perhitungan timestamp.
   const totalHours = overtime.reduce(
-    (sum, item) => sum + (Number(item.hours) || 0),
+    (sum, item) => sum + Number(item.hours),
+    0
+  );
+
+  const totalOvertimePay = overtime.reduce(
+    (sum, item) => sum + Number(item.total),
     0
   );
 
@@ -324,38 +373,51 @@ function buildReport(start, end, type) {
     overtime,
     payroll,
     totalHours,
+    totalOvertimePay,
     totalSalary
   };
 }
 
-function renderReport(report) {
-  currentReport = report;
+function getAttendanceTime(item) {
+  const timestamp = item.timestamp || item.checkInAt;
 
-  periodLabel.textContent =
-    `${formatPeriod(report.start, report.end)} · ${report.employeeLabel}`;
+  if (!timestamp?.toDate) return "-";
 
-  totalEmployees.textContent = report.employees.length;
-  totalAttendance.textContent = report.presentAttendance.length;
-  totalOvertimeHours.textContent =
-    `${Number(report.totalHours.toFixed(2))} jam`;
+  return (
+    new Intl.DateTimeFormat("id-ID", {
+      timeZone: TIME_ZONE,
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false
+    }).format(timestamp.toDate()) + " WIB"
+  );
+}
 
-  totalPayroll.textContent = rupiah(report.totalSalary);
+function getOvertimeDescription(item) {
+  return `${Number(item.hours)} jam · ${rupiah(item.total)}`;
+}
 
-  exportPdfButton.disabled = false;
+function getPayrollStatus(item) {
+  return item.status === "paid" ? "Dibayar" : "Belum dibayar";
+}
 
-  reportTableHead.replaceChildren();
-  reportTableBody.replaceChildren();
+function getReportHeaders(type) {
+  if (type === "attendance") {
+    return ["Tanggal", "Karyawan", "Status", "Waktu"];
+  }
 
-  const headerRow = document.createElement("tr");
+  if (type === "overtime") {
+    return [
+      "Tanggal",
+      "Karyawan",
+      "Jam Resmi",
+      "Tarif/Jam",
+      "Total"
+    ];
+  }
 
-  let headers = [];
-
-  if (report.type === "attendance") {
-    headers = ["Tanggal", "Karyawan", "Status", "Waktu"];
-  } else if (report.type === "overtime") {
-    headers = ["Tanggal", "Karyawan", "Jam", "Tarif/Jam", "Total"];
-  } else if (report.type === "payroll") {
-    headers = [
+  if (type === "payroll") {
+    return [
       "Periode",
       "Karyawan",
       "Hari Hadir",
@@ -364,22 +426,17 @@ function renderReport(report) {
       "Total Gaji",
       "Status"
     ];
-  } else {
-    headers = ["Jenis Data", "Karyawan", "Tanggal/Periode", "Keterangan"];
   }
 
-  headers.forEach((label) => {
-    const cell = document.createElement("th");
+  return [
+    "Jenis Data",
+    "Karyawan",
+    "Tanggal/Periode",
+    "Keterangan"
+  ];
+}
 
-    cell.className =
-      "px-5 py-4 text-xs font-semibold uppercase tracking-wider";
-    cell.textContent = label;
-
-    headerRow.appendChild(cell);
-  });
-
-  reportTableHead.appendChild(headerRow);
-
+function getReportRows(report) {
   const rows = [];
 
   if (report.type === "attendance") {
@@ -387,16 +444,12 @@ function renderReport(report) {
       rows.push([
         formatDate(item.dateKey),
         employeeName(item.userId),
-        item.status === "present" ? "Hadir" :
-          item.status === "absent" ? "Tidak hadir" : item.status || "-",
-        item.timestamp?.toDate
-          ? new Intl.DateTimeFormat("id-ID", {
-              timeZone: TIME_ZONE,
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: false
-            }).format(item.timestamp.toDate()) + " WIB"
-          : "-"
+        item.status === "present"
+          ? "Hadir"
+          : item.status === "absent"
+            ? "Tidak hadir"
+            : item.status || "-",
+        getAttendanceTime(item)
       ]);
     });
   } else if (report.type === "overtime") {
@@ -404,7 +457,7 @@ function renderReport(report) {
       rows.push([
         formatDate(item.dateKey),
         employeeName(item.userId),
-        `${Number(item.hours) || 0} jam`,
+        `${Number(item.hours)} jam`,
         rupiah(item.hourlyRate),
         rupiah(item.total)
       ]);
@@ -418,7 +471,7 @@ function renderReport(report) {
         rupiah(item.baseSalary),
         rupiah(item.overtimePay),
         rupiah(item.totalSalary),
-        item.status === "paid" ? "Dibayar" : "Belum dibayar"
+        getPayrollStatus(item)
       ]);
     });
   } else {
@@ -427,8 +480,11 @@ function renderReport(report) {
         "Absensi",
         employeeName(item.userId),
         formatDate(item.dateKey),
-        item.status === "present" ? "Hadir" :
-          item.status === "absent" ? "Tidak hadir" : item.status || "-"
+        item.status === "present"
+          ? "Hadir"
+          : item.status === "absent"
+            ? "Tidak hadir"
+            : item.status || "-"
       ]);
     });
 
@@ -437,7 +493,7 @@ function renderReport(report) {
         "Lembur",
         employeeName(item.userId),
         formatDate(item.dateKey),
-        `${Number(item.hours) || 0} jam · ${rupiah(item.total)}`
+        getOvertimeDescription(item)
       ]);
     });
 
@@ -446,22 +502,61 @@ function renderReport(report) {
         "Penggajian",
         item.employeeName || employeeName(item.userId),
         formatPeriod(item.periodStart, item.periodEnd),
-        `${rupiah(item.totalSalary)} · ${
-          item.status === "paid" ? "Dibayar" : "Belum dibayar"
-        }`
+        `${rupiah(item.totalSalary)} · ${getPayrollStatus(item)}`
       ]);
     });
   }
 
+  return rows;
+}
+
+function renderReport(report) {
+  currentReport = report;
+
+  periodLabel.textContent =
+    `${formatPeriod(report.start, report.end)} · ${report.employeeLabel}`;
+
+  totalEmployees.textContent = report.employees.length;
+  totalAttendance.textContent = report.presentAttendance.length;
+  totalOvertimeHours.textContent =
+    `${Number(report.totalHours.toFixed(2))} jam`;
+  totalPayroll.textContent = rupiah(report.totalSalary);
+
+  exportPdfButton.disabled = false;
+
+  reportTableHead.replaceChildren();
+
+  const headerRow = document.createElement("tr");
+  const headers = getReportHeaders(report.type);
+
+  headers.forEach((label) => {
+    const cell = document.createElement("th");
+
+    cell.className =
+      "px-5 py-4 text-xs font-semibold uppercase tracking-wider";
+    cell.textContent = label;
+
+    headerRow.appendChild(cell);
+  });
+
+  reportTableHead.appendChild(headerRow);
+
+  const rows = getReportRows(report);
+
   if (!rows.length) {
-    showEmptyTable("Tidak ada data pada filter yang dipilih.", headers.length);
+    showEmptyTable(
+      "Tidak ada data pada filter yang dipilih.",
+      headers.length
+    );
   } else {
+    reportTableBody.replaceChildren();
+
     rows.forEach((values) => {
       const row = document.createElement("tr");
-
       row.className = "hover:bg-slate-800/50";
 
       values.forEach((value) => addCell(row, value));
+
       reportTableBody.appendChild(row);
     });
   }
@@ -494,8 +589,18 @@ async function createReport(event) {
     return;
   }
 
+  if (
+    employeeFilter.value !== "all" &&
+    !employees.some((item) => item.id === employeeFilter.value)
+  ) {
+    showMessage(
+      "Karyawan yang dipilih tidak ditemukan. Silakan pilih ulang.",
+      "error"
+    );
+    return;
+  }
+
   setBusy(true);
-  exportPdfButton.disabled = true;
 
   try {
     await loadSourceData();
@@ -532,6 +637,7 @@ function exportPDF() {
 
   const { jsPDF } = window.jspdf;
   const report = currentReport;
+
   const pdf = new jsPDF({
     orientation: "landscape",
     unit: "mm",
@@ -541,7 +647,7 @@ function exportPDF() {
   const titleMap = {
     all: "Laporan Lengkap",
     attendance: "Rekap Absensi",
-    overtime: "Rekap Lembur",
+    overtime: "Rekap Lembur Disetujui",
     payroll: "Rekap Penggajian"
   };
 
@@ -568,99 +674,12 @@ function exportPDF() {
     46
   );
 
-  const rows = [];
+  const headers = getReportHeaders(report.type);
+  const rows = getReportRows(report);
 
-  if (report.type === "attendance") {
-    report.attendance.forEach((item) => {
-      rows.push([
-        item.dateKey || "-",
-        employeeName(item.userId),
-        item.status || "-",
-        item.timestamp?.toDate
-          ? new Intl.DateTimeFormat("id-ID", {
-              timeZone: TIME_ZONE,
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: false
-            }).format(item.timestamp.toDate()) + " WIB"
-          : "-"
-      ]);
-    });
-  } else if (report.type === "overtime") {
-    report.overtime.forEach((item) => {
-      rows.push([
-        item.dateKey || "-",
-        employeeName(item.userId),
-        `${Number(item.hours) || 0} jam`,
-        rupiah(item.hourlyRate),
-        rupiah(item.total)
-      ]);
-    });
-  } else if (report.type === "payroll") {
-    report.payroll.forEach((item) => {
-      rows.push([
-        `${item.periodStart} - ${item.periodEnd}`,
-        item.employeeName || employeeName(item.userId),
-        String(item.attendanceDays ?? 0),
-        rupiah(item.baseSalary),
-        rupiah(item.overtimePay),
-        rupiah(item.totalSalary),
-        item.status === "paid" ? "Dibayar" : "Belum dibayar"
-      ]);
-    });
-  } else {
-    report.attendance.forEach((item) => {
-      rows.push([
-        "Absensi",
-        employeeName(item.userId),
-        item.dateKey || "-",
-        item.status || "-"
-      ]);
-    });
-
-    report.overtime.forEach((item) => {
-      rows.push([
-        "Lembur",
-        employeeName(item.userId),
-        item.dateKey || "-",
-        `${Number(item.hours) || 0} jam · ${rupiah(item.total)}`
-      ]);
-    });
-
-    report.payroll.forEach((item) => {
-      rows.push([
-        "Penggajian",
-        item.employeeName || employeeName(item.userId),
-        `${item.periodStart} - ${item.periodEnd}`,
-        `${rupiah(item.totalSalary)} (${item.status || "unpaid"})`
-      ]);
-    });
-  }
-
-  // jsPDF AutoTable digunakan jika tersedia.
   if (typeof pdf.autoTable === "function") {
-    let headers;
-
-    if (report.type === "attendance") {
-      headers = [["Tanggal", "Karyawan", "Status", "Waktu"]];
-    } else if (report.type === "overtime") {
-      headers = [["Tanggal", "Karyawan", "Jam", "Tarif/Jam", "Total"]];
-    } else if (report.type === "payroll") {
-      headers = [[
-        "Periode",
-        "Karyawan",
-        "Hari Hadir",
-        "Gaji Pokok",
-        "Lembur",
-        "Total Gaji",
-        "Status"
-      ]];
-    } else {
-      headers = [["Jenis Data", "Karyawan", "Tanggal/Periode", "Keterangan"]];
-    }
-
     pdf.autoTable({
-      head: headers,
+      head: [headers],
       body: rows,
       startY: 53,
       theme: "grid",
@@ -673,10 +692,13 @@ function exportPDF() {
       }
     });
   } else {
-    // Fallback jika plugin AutoTable belum dimuat.
+    // Fallback jika plugin AutoTable tidak tersedia.
     let y = 56;
 
     pdf.setFontSize(9);
+
+    pdf.text(headers.join(" | "), 14, y);
+    y += 7;
 
     rows.forEach((row) => {
       const line = row.map((value) => String(value)).join(" | ");
@@ -712,21 +734,27 @@ function resetFilters() {
   currentReport = null;
   exportPdfButton.disabled = true;
 
-  periodLabel.textContent = "Pilih periode untuk menampilkan laporan.";
+  periodLabel.textContent =
+    "Pilih periode untuk menampilkan laporan.";
+
   resetSummary();
 
   reportTableHead.replaceChildren();
+
   const row = document.createElement("tr");
 
   ["Informasi", "Periode", "Keterangan"].forEach((label) => {
     const cell = document.createElement("th");
+
     cell.className =
       "px-5 py-4 text-xs font-semibold uppercase tracking-wider";
     cell.textContent = label;
+
     row.appendChild(cell);
   });
 
   reportTableHead.appendChild(row);
+
   showEmptyTable(
     "Belum ada laporan. Pilih filter lalu klik Tampilkan Laporan."
   );
@@ -745,7 +773,9 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   try {
-    const profileSnapshot = await getDoc(doc(db, "users", user.uid));
+    const profileSnapshot = await getDoc(
+      doc(db, "users", user.uid)
+    );
 
     if (
       !profileSnapshot.exists() ||
@@ -760,7 +790,10 @@ onAuthStateChanged(auth, async (user) => {
     currentAdmin = user;
 
     const today = getTodayKey();
-    startDateInput.value = `${today.slice(0, 4)}-${today.slice(5, 7)}-01`;
+
+    startDateInput.value =
+      `${today.slice(0, 4)}-${today.slice(5, 7)}-01`;
+
     endDateInput.value = today;
 
     await loadSourceData();
@@ -775,5 +808,3 @@ onAuthStateChanged(auth, async (user) => {
     );
   }
 });
-
-

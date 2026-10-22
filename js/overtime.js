@@ -11,29 +11,23 @@ import {
   doc,
   getDoc,
   getDocs,
-  addDoc,
-  updateDoc,
-  deleteDoc,
+  runTransaction,
   serverTimestamp
 } from "firebase/firestore";
 
 const $ = (id) => document.getElementById(id);
 
-const form = $("overtimeForm");
-const employeeSelect = $("employeeId");
-const dateInput = $("dateKey");
-const hoursInput = $("hours");
-const rateInput = $("hourlyRate");
-const totalPreview = $("calculatedTotal");
+const form = $("reviewForm");
 const tableBody = $("overtimeTableBody");
 const messageBox = $("pageMessage");
-const saveButton = $("saveButton");
-const cancelEditButton = $("cancelEditButton");
+const approveButton = $("approveButton");
+const cancelButton = $("cancelReviewButton");
 
 let currentAdmin = null;
-let employees = [];
+let attendanceRecords = [];
 let overtimeRecords = [];
-let editingId = null;
+let employeeMap = new Map();
+let selectedRecord = null;
 let busy = false;
 
 const rupiah = (value) =>
@@ -43,18 +37,8 @@ const rupiah = (value) =>
     maximumFractionDigits: 0
   }).format(Number(value) || 0);
 
-function getTodayWIB() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Jakarta",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).format(new Date());
-}
-
 function showMessage(message, type = "success") {
   messageBox.textContent = message;
-
   messageBox.className =
     "rounded-xl border p-4 text-sm " +
     (type === "error"
@@ -68,11 +52,20 @@ function hideMessage() {
   messageBox.classList.add("hidden");
 }
 
+function timestampDate(value) {
+  if (value && typeof value.toDate === "function") {
+    return value.toDate();
+  }
+
+  if (value instanceof Date) return value;
+
+  return null;
+}
+
 function formatDate(dateKey) {
   if (!dateKey) return "-";
 
   const parts = dateKey.split("-").map(Number);
-
   if (parts.length !== 3 || parts.some(Number.isNaN)) {
     return dateKey;
   }
@@ -82,113 +75,135 @@ function formatDate(dateKey) {
     month: "short",
     year: "numeric",
     timeZone: "Asia/Jakarta"
-  }).format(
-    new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], 12))
-  );
+  }).format(new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], 12)));
+}
+
+function formatTime(value) {
+  const date = timestampDate(value);
+  if (!date) return "-";
+
+  return new Intl.DateTimeFormat("id-ID", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Asia/Jakarta"
+  }).format(date);
+}
+
+function formatDuration(minutes) {
+  const value = Number(minutes);
+
+  if (!Number.isFinite(value) || value < 0) return "-";
+
+  const wholeMinutes = Math.floor(value);
+  const hours = Math.floor(wholeMinutes / 60);
+  const remainder = wholeMinutes % 60;
+
+  return `${hours} jam ${remainder} menit`;
+}
+
+function actualDurationMinutes(attendance) {
+  const start = timestampDate(attendance.overtimeCheckInAt);
+  const end = timestampDate(attendance.overtimeCheckOutAt);
+
+  if (!start || !end) return null;
+
+  const difference = Math.floor((end.getTime() - start.getTime()) / 60000);
+
+  if (difference <= 0 || difference > 24 * 60) return null;
+
+  return difference;
+}
+
+function getEmployeeName(userId) {
+  const employee = employeeMap.get(userId);
+
+  return employee?.name || employee?.email || "Karyawan tidak ditemukan";
+}
+
+function getOvertimeForAttendance(attendanceId) {
+  return overtimeRecords.find(
+    (record) => record.attendanceId === attendanceId
+  ) || null;
 }
 
 function calculateTotal() {
-  const hours = Number(hoursInput.value);
-  const rate = Number(rateInput.value);
+  const hours = Number($("approvedHours").value);
+  const rate = Number($("hourlyRate").value);
 
   const total =
     Number.isFinite(hours) &&
     Number.isFinite(rate) &&
     hours > 0 &&
     rate > 0
-      ? hours * rate
+      ? Math.round(hours * rate)
       : 0;
 
-  totalPreview.textContent = rupiah(total);
+  $("calculatedTotal").textContent = rupiah(total);
 
   return total;
 }
 
 function setBusy(value) {
   busy = value;
+  approveButton.disabled = value;
+  cancelButton.disabled = value;
 
-  saveButton.disabled = value;
-  cancelEditButton.disabled = value;
-
-  saveButton.textContent = value
+  approveButton.textContent = value
     ? "Memproses..."
-    : editingId
+    : selectedRecord?.approved
       ? "Simpan Perubahan"
-      : "Simpan Lembur";
+      : "Setujui Lembur";
 }
 
-function renderEmployeeOptions(selectedId = "") {
-  employeeSelect.replaceChildren();
-
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.textContent = employees.length
-    ? "Pilih karyawan"
-    : "Belum ada karyawan aktif";
-
-  employeeSelect.appendChild(placeholder);
-
-  for (const employee of employees) {
-    const option = document.createElement("option");
-
-    option.value = employee.id;
-    option.textContent =
-      employee.name || employee.email || employee.id;
-
-    employeeSelect.appendChild(option);
-  }
-
-  employeeSelect.value = selectedId;
-}
-
-async function loadEmployees() {
-  const snapshot = await getDocs(collection(db, "users"));
-
-  employees = snapshot.docs
-    .map((item) => ({
-      id: item.id,
-      ...item.data()
-    }))
-    .filter(
-      (employee) =>
-        employee.role === "user" &&
-        employee.isActive === true
-    )
-    .sort((a, b) =>
-      String(a.name || "").localeCompare(
-        String(b.name || ""),
-        "id"
-      )
-    );
-
-  renderEmployeeOptions(
-    editingId
-      ? form.dataset.employeeId || ""
-      : ""
-  );
-}
-
-async function loadOvertime() {
+async function loadData() {
   tableBody.innerHTML = `
     <tr>
-      <td colspan="6" class="px-3 py-8 text-center text-slate-400">
-        Memuat data...
+      <td colspan="8" class="px-3 py-8 text-center text-slate-400">
+        Memuat data absensi lembur...
       </td>
     </tr>
   `;
 
-  const snapshot = await getDocs(collection(db, "overtime"));
+  const [attendanceSnapshot, overtimeSnapshot, usersSnapshot] =
+    await Promise.all([
+      getDocs(collection(db, "attendance")),
+      getDocs(collection(db, "overtime")),
+      getDocs(collection(db, "users"))
+    ]);
 
-  overtimeRecords = snapshot.docs.map((item) => ({
+  employeeMap = new Map(
+    usersSnapshot.docs.map((item) => [
+      item.id,
+      { id: item.id, ...item.data() }
+    ])
+  );
+
+  attendanceRecords = attendanceSnapshot.docs
+    .map((item) => ({
+      id: item.id,
+      ...item.data()
+    }))
+    .filter((item) => {
+      const hasCompletedStatus = item.overtimeStatus === "completed";
+      const hasBothTimes =
+        item.overtimeCheckInAt &&
+        item.overtimeCheckOutAt;
+
+      return hasCompletedStatus && hasBothTimes;
+    })
+    .map((item) => ({
+      ...item,
+      actualMinutes: actualDurationMinutes(item)
+    }))
+    .filter((item) => item.actualMinutes !== null)
+    .sort((a, b) =>
+      String(b.dateKey || "").localeCompare(String(a.dateKey || ""))
+    );
+
+  overtimeRecords = overtimeSnapshot.docs.map((item) => ({
     id: item.id,
     ...item.data()
   }));
-
-  overtimeRecords.sort((a, b) =>
-    String(b.dateKey || "").localeCompare(
-      String(a.dateKey || "")
-    )
-  );
 
   renderTable();
 }
@@ -197,284 +212,307 @@ function renderTable() {
   const keyword = $("searchInput").value.trim().toLowerCase();
   const selectedDate = $("filterDate").value;
 
-  const filtered = overtimeRecords.filter((record) => {
-    const employee = employees.find(
-      (item) => item.id === record.userId
+  const rows = attendanceRecords.filter((attendance) => {
+    const name = getEmployeeName(attendance.userId).toLowerCase();
+
+    return (
+      name.includes(keyword) &&
+      (!selectedDate || attendance.dateKey === selectedDate)
     );
-
-    const name =
-      record.employeeName ||
-      employee?.name ||
-      employee?.email ||
-      "Karyawan tidak aktif";
-
-    const matchesName = name.toLowerCase().includes(keyword);
-    const matchesDate =
-      !selectedDate || record.dateKey === selectedDate;
-
-    return matchesName && matchesDate;
   });
 
   tableBody.replaceChildren();
 
+  let pendingCount = 0;
+  let approvedCount = 0;
   let totalVisible = 0;
 
-  for (const record of filtered) {
-    const employee = employees.find(
-      (item) => item.id === record.userId
-    );
+  for (const attendance of rows) {
+    const overtime = getOvertimeForAttendance(attendance.id);
+    const isApproved = overtime?.status === "approved";
 
-    const name =
-      record.employeeName ||
-      employee?.name ||
-      employee?.email ||
-      "Karyawan tidak aktif";
+    if (isApproved) {
+      approvedCount += 1;
+      totalVisible += Number(overtime.total) || 0;
+    } else {
+      pendingCount += 1;
+    }
 
-    const hours = Number(record.hours) || 0;
-    const rate = Number(record.hourlyRate) || 0;
-    const total = Number(record.total) || hours * rate;
-
-    totalVisible += total;
-
+    const name = getEmployeeName(attendance.userId);
     const row = document.createElement("tr");
     row.className = "hover:bg-slate-800/50";
 
     const values = [
-      formatDate(record.dateKey),
+      formatDate(attendance.dateKey),
       name,
-      `${hours} jam`,
-      rupiah(rate),
-      rupiah(total)
+      formatDuration(attendance.actualMinutes),
+      isApproved
+        ? formatDuration(overtime.approvedDurationMinutes ?? Math.round(Number(overtime.hours) * 60))
+        : "-",
+      isApproved ? rupiah(overtime.hourlyRate) : "-",
+      isApproved ? rupiah(overtime.total) : "-"
     ];
 
     for (const value of values) {
       const cell = document.createElement("td");
-
       cell.className = "px-3 py-4";
       cell.textContent = value;
-
       row.appendChild(cell);
     }
+
+    const statusCell = document.createElement("td");
+    statusCell.className = "px-3 py-4";
+
+    const status = document.createElement("span");
+    status.className = isApproved
+      ? "rounded-full bg-emerald-950 px-3 py-1 text-xs text-emerald-300"
+      : "rounded-full bg-amber-950 px-3 py-1 text-xs text-amber-300";
+    status.textContent = isApproved ? "Disetujui" : "Menunggu";
+
+    statusCell.appendChild(status);
+    row.appendChild(statusCell);
 
     const actionCell = document.createElement("td");
     actionCell.className = "px-3 py-4";
 
-    const actionWrapper = document.createElement("div");
-    actionWrapper.className = "flex flex-wrap gap-2";
-
-    const editButton = document.createElement("button");
-
-    editButton.type = "button";
-    editButton.textContent = "Edit";
-    editButton.className =
+    const reviewButton = document.createElement("button");
+    reviewButton.type = "button";
+    reviewButton.textContent = isApproved ? "Lihat / Edit" : "Periksa";
+    reviewButton.className =
       "rounded-lg border border-blue-800 px-3 py-2 text-blue-300 hover:bg-blue-950";
 
-    editButton.addEventListener("click", () => {
-      startEdit(record);
+    reviewButton.addEventListener("click", () => {
+      openReview(attendance, overtime);
     });
 
-    const deleteButton = document.createElement("button");
-
-    deleteButton.type = "button";
-    deleteButton.textContent = "Hapus";
-    deleteButton.className =
-      "rounded-lg border border-red-800 px-3 py-2 text-red-300 hover:bg-red-950";
-
-    deleteButton.addEventListener("click", () => {
-      deleteOvertime(record);
-    });
-
-    actionWrapper.append(editButton, deleteButton);
-    actionCell.appendChild(actionWrapper);
+    actionCell.appendChild(reviewButton);
     row.appendChild(actionCell);
 
     tableBody.appendChild(row);
   }
 
-  if (filtered.length === 0) {
+  if (rows.length === 0) {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
 
-    cell.colSpan = 6;
+    cell.colSpan = 8;
     cell.className = "px-3 py-10 text-center text-slate-400";
-    cell.textContent = "Belum ada data lembur yang sesuai.";
+    cell.textContent =
+      "Belum ada absensi lembur lengkap yang cocok dengan filter.";
 
     row.appendChild(cell);
     tableBody.appendChild(row);
   }
 
-  $("recordCount").textContent = `${filtered.length} catatan`;
+  $("recordCount").textContent = `${rows.length} catatan`;
+  $("pendingCount").textContent = String(pendingCount);
+  $("approvedCount").textContent = String(approvedCount);
   $("totalOvertime").textContent = rupiah(totalVisible);
 }
 
-function startEdit(record) {
+function openReview(attendance, overtime = null) {
   if (busy) return;
 
-  editingId = record.id;
-  form.dataset.employeeId = record.userId || "";
+  selectedRecord = {
+    attendance,
+    overtime,
+    approved: overtime?.status === "approved"
+  };
 
-  renderEmployeeOptions(record.userId || "");
+  $("selectedAttendanceId").value = attendance.id;
+  $("employeeName").value = getEmployeeName(attendance.userId);
+  $("dateKey").value = attendance.dateKey || "";
 
-  dateInput.value = record.dateKey || getTodayWIB();
-  hoursInput.value = record.hours ?? "";
-  rateInput.value = record.hourlyRate ?? "";
+  $("actualCheckIn").textContent = formatTime(attendance.overtimeCheckInAt);
+  $("actualCheckOut").textContent = formatTime(attendance.overtimeCheckOutAt);
 
-  $("formTitle").textContent = "Edit Data Lembur";
-  cancelEditButton.classList.remove("hidden");
+  $("actualDuration").textContent =
+    formatDuration(attendance.actualMinutes);
 
+  const checkInLocation = attendance.overtimeCheckInLocation;
+  const checkOutLocation = attendance.overtimeCheckOutLocation;
+
+  $("checkInLocation").textContent =
+    `Lokasi: ${formatLocation(checkInLocation)}`;
+
+  $("checkOutLocation").textContent =
+    `Lokasi: ${formatLocation(checkOutLocation)}`;
+
+  $("approvedHours").value = selectedRecord.approved
+    ? (Number(overtime.approvedDurationMinutes ?? Math.round(Number(overtime.hours) * 60)) / 60).toFixed(2)
+    : (attendance.actualMinutes / 60).toFixed(2);
+
+  $("hourlyRate").value = selectedRecord.approved
+    ? overtime.hourlyRate ?? ""
+    : "";
+
+  $("formTitle").textContent = selectedRecord.approved
+    ? "Edit Persetujuan Lembur"
+    : "Periksa Absensi Lembur";
+
+  approveButton.textContent = selectedRecord.approved
+    ? "Simpan Perubahan"
+    : "Setujui Lembur";
+
+  $("reviewPanel").classList.remove("hidden");
   calculateTotal();
-
-  saveButton.textContent = "Simpan Perubahan";
-
   hideMessage();
 
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth"
+  $("reviewPanel").scrollIntoView({
+    behavior: "smooth",
+    block: "start"
   });
 }
 
-function resetForm() {
-  editingId = null;
-  delete form.dataset.employeeId;
+function formatLocation(location) {
+  if (!location || typeof location !== "object") return "Tidak tersedia";
 
+  const latitude = Number(location.latitude);
+  const longitude = Number(location.longitude);
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return "Tidak tersedia";
+  }
+
+  return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+}
+
+function closeReview() {
+  if (busy) return;
+
+  selectedRecord = null;
   form.reset();
-
-  dateInput.value = getTodayWIB();
-
-  $("formTitle").textContent = "Tambah Data Lembur";
-
-  cancelEditButton.classList.add("hidden");
-
-  renderEmployeeOptions();
-  calculateTotal();
-
-  saveButton.textContent = "Simpan Lembur";
+  $("reviewPanel").classList.add("hidden");
+  $("calculatedTotal").textContent = rupiah(0);
 }
 
 async function handleSubmit(event) {
   event.preventDefault();
-
   hideMessage();
 
-  if (busy || !currentAdmin) return;
+  if (busy || !currentAdmin || !selectedRecord) return;
 
-  const userId = employeeSelect.value;
-  const dateKey = dateInput.value;
-  const hours = Number(hoursInput.value);
-  const hourlyRate = Number(rateInput.value);
+  const { attendance, overtime, approved } = selectedRecord;
+
+  const hours = Number($("approvedHours").value);
+  const hourlyRate = Number($("hourlyRate").value);
   const total = calculateTotal();
-
-  const employee = employees.find(
-    (item) => item.id === userId
-  );
-
-  if (!employee) {
-    showMessage("Pilih karyawan yang masih aktif.", "error");
-    return;
-  }
-
-  if (!dateKey || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
-    showMessage("Tanggal lembur tidak valid.", "error");
-    return;
-  }
 
   if (
     !Number.isFinite(hours) ||
-    hours < 0.5 ||
+    hours <= 0 ||
     hours > 24 ||
     !Number.isFinite(hourlyRate) ||
     hourlyRate <= 0 ||
+    !Number.isSafeInteger(hourlyRate) ||
     !Number.isSafeInteger(total) ||
     total <= 0
   ) {
     showMessage(
-      "Periksa jumlah jam dan tarif. Total harus berupa nominal rupiah bulat.",
+      "Periksa durasi resmi dan tarif. Gunakan tarif rupiah bulat yang lebih besar dari nol.",
       "error"
     );
     return;
   }
 
+  const approvedDurationMinutes = Math.round(hours * 60);
+  const normalizedHours = approvedDurationMinutes / 60;
+
   setBusy(true);
 
   try {
-    const recordData = {
-      userId,
-      employeeName: employee.name || employee.email || "Karyawan",
-      dateKey,
-      hours,
-      hourlyRate,
-      total,
-      updatedAt: serverTimestamp(),
-      updatedBy: currentAdmin.uid
-    };
+    const overtimeRef = doc(db, "overtime", attendance.id);
 
-    if (editingId) {
-      await updateDoc(
-        doc(db, "overtime", editingId),
-        recordData
+    await runTransaction(db, async (transaction) => {
+      const attendanceSnapshot = await transaction.get(
+        doc(db, "attendance", attendance.id)
       );
 
-      showMessage("Data lembur berhasil diperbarui.");
-    } else {
-      await addDoc(collection(db, "overtime"), {
-        ...recordData,
-        createdAt: serverTimestamp(),
-        createdBy: currentAdmin.uid
-      });
+      if (!attendanceSnapshot.exists()) {
+        throw new Error("ABSENCE_NOT_FOUND");
+      }
 
-      showMessage("Data lembur berhasil disimpan.");
-    }
+      const freshAttendance = attendanceSnapshot.data();
 
-    resetForm();
-    await loadOvertime();
-  } catch (error) {
-    console.error("Gagal menyimpan lembur:", error);
+      if (
+        freshAttendance.overtimeStatus !== "completed" ||
+        !freshAttendance.overtimeCheckInAt ||
+        !freshAttendance.overtimeCheckOutAt
+      ) {
+        throw new Error("ABSENCE_NOT_COMPLETED");
+      }
+
+      const freshMinutes = actualDurationMinutes(freshAttendance);
+
+      if (freshMinutes === null) {
+        throw new Error("INVALID_ACTUAL_DURATION");
+      }
+
+      const existingSnapshot = await transaction.get(overtimeRef);
+
+      if (existingSnapshot.exists()) {
+        const existing = existingSnapshot.data();
+
+        if (existing.attendanceId !== attendance.id) {
+          throw new Error("LEGACY_RECORD_CONFLICT");
+        }
+      }
+
+      const recordData = {
+        attendanceId: attendance.id,
+        userId: freshAttendance.userId,
+        employeeName: getEmployeeName(freshAttendance.userId),
+        dateKey: freshAttendance.dateKey,
+        actualDurationMinutes: freshMinutes,
+        approvedDurationMinutes,
+        hours: normalizedHours,
+        hourlyRate,
+        total,
+        status: "approved",
+        updatedAt: serverTimestamp(),
+        updatedBy: currentAdmin.uid,
+        approvedAt: serverTimestamp(),
+        approvedBy: currentAdmin.uid
+      };
+
+      if (!existingSnapshot.exists()) {
+        transaction.set(overtimeRef, {
+          ...recordData,
+          createdAt: serverTimestamp(),
+          createdBy: currentAdmin.uid
+        });
+      } else {
+        transaction.update(overtimeRef, recordData);
+      }
+    });
 
     showMessage(
-      error.code === "permission-denied"
-        ? "Akses ditolak. Periksa Firestore Security Rules."
-        : "Data gagal disimpan. Periksa koneksi dan konfigurasi Firebase.",
-      "error"
+      approved
+        ? "Persetujuan lembur berhasil diperbarui."
+        : "Lembur berhasil disetujui."
     );
-  } finally {
-    setBusy(false);
-  }
-}
 
-async function deleteOvertime(record) {
-  if (busy || !currentAdmin) return;
+    selectedRecord = null;
+    form.reset();
+    $("reviewPanel").classList.add("hidden");
 
-  const confirmed = window.confirm(
-    `Yakin ingin menghapus catatan lembur ini?\n\n` +
-    `Nama: ${record.employeeName || "Karyawan"}\n` +
-    `Tanggal: ${formatDate(record.dateKey)}\n` +
-    `Total: ${rupiah(record.total)}\n\n` +
-    `Penghapusan ini permanen di Firestore.`
-  );
-
-  if (!confirmed) return;
-
-  hideMessage();
-  setBusy(true);
-
-  try {
-    await deleteDoc(doc(db, "overtime", record.id));
-
-    if (editingId === record.id) {
-      resetForm();
-    }
-
-    await loadOvertime();
-
-    showMessage("Data lembur berhasil dihapus.");
+    await loadData();
   } catch (error) {
-    console.error("Gagal menghapus lembur:", error);
+    console.error("Gagal menyimpan persetujuan lembur:", error);
+
+    const messages = {
+      "ABSENCE_NOT_FOUND": "Data absensi tidak ditemukan.",
+      "ABSENCE_NOT_COMPLETED": "Absensi lembur belum lengkap. Muat ulang data.",
+      "INVALID_ACTUAL_DURATION": "Durasi aktual tidak valid. Periksa timestamp absensi.",
+      "LEGACY_RECORD_CONFLICT":
+        "ID absensi ini sudah bertabrakan dengan catatan lembur lama. Periksa data lama terlebih dahulu."
+    };
 
     showMessage(
-      error.code === "permission-denied"
-        ? "Akses ditolak. Periksa Firestore Security Rules."
-        : "Data lembur gagal dihapus.",
+      messages[error.message] ||
+        (error.code === "permission-denied"
+          ? "Akses ditolak. Firestore Security Rules perlu disesuaikan dengan skema persetujuan lembur."
+          : "Persetujuan gagal disimpan. Periksa koneksi dan log konsol."),
       "error"
     );
   } finally {
@@ -483,9 +521,7 @@ async function deleteOvertime(record) {
 }
 
 async function initializePage(user) {
-  const profileSnapshot = await getDoc(
-    doc(db, "users", user.uid)
-  );
+  const profileSnapshot = await getDoc(doc(db, "users", user.uid));
 
   if (
     !profileSnapshot.exists() ||
@@ -498,17 +534,15 @@ async function initializePage(user) {
   }
 
   currentAdmin = user;
-
-  dateInput.value = getTodayWIB();
-
-  await loadEmployees();
-  await loadOvertime();
+  await loadData();
 }
 
 form.addEventListener("submit", handleSubmit);
 
-hoursInput.addEventListener("input", calculateTotal);
-rateInput.addEventListener("input", calculateTotal);
+$("approvedHours").addEventListener("input", calculateTotal);
+$("hourlyRate").addEventListener("input", calculateTotal);
+
+$("cancelReviewButton").addEventListener("click", closeReview);
 
 $("searchInput").addEventListener("input", renderTable);
 $("filterDate").addEventListener("change", renderTable);
@@ -526,20 +560,14 @@ $("refreshButton").addEventListener("click", async () => {
   setBusy(true);
 
   try {
-    await loadEmployees();
-    await loadOvertime();
-
-    showMessage("Data berhasil dimuat ulang.");
+    await loadData();
+    showMessage("Data absensi lembur berhasil dimuat ulang.");
   } catch (error) {
-    console.error("Gagal memuat data:", error);
-    showMessage("Gagal memuat data lembur.", "error");
+    console.error("Gagal memuat data lembur:", error);
+    showMessage("Gagal memuat data. Periksa Firestore Security Rules.", "error");
   } finally {
     setBusy(false);
   }
-});
-
-cancelEditButton.addEventListener("click", () => {
-  if (!busy) resetForm();
 });
 
 onAuthStateChanged(auth, async (user) => {
@@ -551,8 +579,7 @@ onAuthStateChanged(auth, async (user) => {
   try {
     await initializePage(user);
   } catch (error) {
-    console.error("Gagal membuka modul lembur:", error);
-
+    console.error("Gagal membuka halaman persetujuan lembur:", error);
     showMessage(
       "Halaman gagal dimuat. Periksa profil Admin dan Firestore Security Rules.",
       "error"
