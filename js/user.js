@@ -88,6 +88,17 @@ let historyRequestId = 0;
 let todayRecord = null;
 
 // ========================================
+// UTILITAS DEBUG
+// ========================================
+
+function logFirebaseError(context, error) {
+  console.error(`[DEBUG] ${context}`, {
+    code: error?.code || "unknown",
+    message: error?.message || String(error)
+  });
+}
+
+// ========================================
 // TANGGAL DAN WAKTU WIB
 // ========================================
 
@@ -152,16 +163,20 @@ function formatHours(hours) {
 }
 
 function updateClock() {
-  todayDate.textContent = formatDate();
-  currentTime.textContent =
-    `Waktu sekarang: ${formatTime()} WIB`;
+  if (todayDate) todayDate.textContent = formatDate();
+
+  if (currentTime) {
+    currentTime.textContent = `Waktu sekarang: ${formatTime()} WIB`;
+  }
 }
 
 // ========================================
-// PESAN
+// PESAN DAN TOMBOL
 // ========================================
 
 function showMessage(message, type = "info") {
+  if (!attendanceMessage) return;
+
   const colors = {
     info: "text-slate-400",
     success: "text-emerald-400",
@@ -188,6 +203,8 @@ function showNoOvertimeMessage(message, type = "info") {
 }
 
 function setAttendanceButton(enabled, label) {
+  if (!attendanceBtn) return;
+
   attendanceBtn.disabled = !enabled;
   attendanceBtn.textContent = label;
 }
@@ -209,6 +226,10 @@ function getNextStepIndex(data) {
 }
 
 function getAttendanceRef() {
+  if (!currentUser) {
+    throw new Error("Pengguna belum terautentikasi.");
+  }
+
   return doc(
     db,
     "attendance",
@@ -219,6 +240,15 @@ function getAttendanceRef() {
 function updateAttendanceUI(data) {
   todayRecord = data || null;
 
+  if (
+    !attendanceIndicator ||
+    !attendanceStatus ||
+    !attendanceTime ||
+    !locationStatus
+  ) {
+    return;
+  }
+
   const index = getNextStepIndex(data);
 
   if (!data) {
@@ -227,8 +257,7 @@ function updateAttendanceUI(data) {
       "flex h-11 w-11 items-center justify-center rounded-xl bg-slate-800 text-xl text-slate-300";
 
     attendanceStatus.textContent = "Belum Absen";
-    attendanceStatus.className =
-      "font-semibold text-slate-100";
+    attendanceStatus.className = "font-semibold text-slate-100";
 
     attendanceTime.textContent =
       "Silakan lakukan Absen Masuk hari ini.";
@@ -278,23 +307,17 @@ function updateAttendanceUI(data) {
     locationStatus.textContent =
       `GPS masuk: ${firstLocation.latitude.toFixed(6)}, ${firstLocation.longitude.toFixed(6)}`;
   } else {
-    locationStatus.textContent =
-      "Data lokasi absensi tersimpan.";
+    locationStatus.textContent = "Data lokasi absensi tersimpan.";
   }
 
-  // Pilihan tidak lembur hanya tersedia setelah Absen Keluar,
-  // sebelum lembur dimulai.
   if (noOvertimeSection) {
-    const canChooseNoOvertime =
+    const canChoose =
       Boolean(data.checkOutAt) &&
       !data.overtimeCheckInAt &&
       !data.overtimeCheckOutAt &&
       !data.overtimeStatus;
 
-    noOvertimeSection.classList.toggle(
-      "hidden",
-      !canChooseNoOvertime
-    );
+    noOvertimeSection.classList.toggle("hidden", !canChoose);
 
     if (data.overtimeStatus === "none") {
       showNoOvertimeMessage(
@@ -307,6 +330,8 @@ function updateAttendanceUI(data) {
 
 async function loadTodayAttendance() {
   if (!currentUser) return;
+
+  console.log("[DEBUG] Membaca absensi hari ini.");
 
   const snapshot = await getDoc(getAttendanceRef());
 
@@ -364,11 +389,18 @@ function makeLocation(position) {
 }
 
 // ========================================
-// VALIDASI AKUN
+// VALIDASI PROFIL KARYAWAN
 // ========================================
 
 async function validateCurrentEmployee() {
+  if (!currentUser) {
+    throw new Error("Sesi pengguna tidak ditemukan.");
+  }
+
   const userRef = doc(db, "users", currentUser.uid);
+
+  console.log("[DEBUG] Validasi profil:", currentUser.uid);
+
   const snapshot = await getDoc(userRef);
 
   if (!snapshot.exists()) {
@@ -377,12 +409,10 @@ async function validateCurrentEmployee() {
 
   const profile = snapshot.data();
 
-  if (
-    profile.isActive !== true ||
-    profile.role !== "user"
-  ) {
+  if (profile.isActive !== true || profile.role !== "user") {
     await signOut(auth);
     window.location.replace("./index.html");
+
     throw new Error("Akun tidak memiliki akses absensi.");
   }
 }
@@ -405,7 +435,6 @@ async function submitAttendance() {
     const snapshot = await getDoc(attendanceRef);
     const data = snapshot.exists() ? snapshot.data() : null;
 
-    // Hitung ulang tahap dari data terbaru Firestore.
     const index = getNextStepIndex(data);
 
     if (index >= 4) {
@@ -420,10 +449,7 @@ async function submitAttendance() {
       throw new Error("Tahap sebelumnya belum selesai.");
     }
 
-    showMessage(
-      `Mengambil GPS untuk ${step.label}...`,
-      "info"
-    );
+    showMessage(`Mengambil GPS untuk ${step.label}...`, "info");
 
     locationStatus.textContent = "Mengambil lokasi GPS...";
 
@@ -437,8 +463,6 @@ async function submitAttendance() {
       throw new Error("Koordinat GPS tidak valid.");
     }
 
-    // Baca ulang setelah GPS untuk mengurangi risiko
-    // dua klik atau dua tab mencatat tahap yang sama.
     const latestSnapshot = await getDoc(attendanceRef);
     const latestData = latestSnapshot.exists()
       ? latestSnapshot.data()
@@ -447,7 +471,7 @@ async function submitAttendance() {
     if (getNextStepIndex(latestData) !== index) {
       updateAttendanceUI(latestData);
       showMessage(
-        "Data absensi berubah. Silakan periksa tahap berikutnya.",
+        "Data absensi berubah. Periksa tahap berikutnya.",
         "info"
       );
       return;
@@ -488,23 +512,19 @@ async function submitAttendance() {
     locationStatus.textContent =
       `GPS: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
 
-    showMessage(
-      `${step.label} berhasil dicatat.`,
-      "success"
-    );
+    showMessage(`${step.label} berhasil dicatat.`, "success");
   } catch (error) {
-    console.error("Gagal mencatat absensi:", error);
+    logFirebaseError("Gagal mencatat absensi", error);
 
     showMessage(
-      error.message ||
-        "Absensi gagal disimpan. Silakan coba kembali.",
+      error.message || "Absensi gagal disimpan. Silakan coba kembali.",
       "error"
     );
 
     try {
       await loadTodayAttendance();
     } catch (reloadError) {
-      console.error("Gagal memuat ulang absensi:", reloadError);
+      logFirebaseError("Gagal memuat ulang absensi", reloadError);
     }
   } finally {
     isProcessing = false;
@@ -512,11 +532,11 @@ async function submitAttendance() {
     if (currentUser) {
       try {
         const snapshot = await getDoc(getAttendanceRef());
-        const data = snapshot.exists() ? snapshot.data() : null;
-
-        updateAttendanceUI(data);
+        updateAttendanceUI(
+          snapshot.exists() ? snapshot.data() : null
+        );
       } catch (error) {
-        console.error("Gagal memperbarui tombol:", error);
+        logFirebaseError("Gagal memperbarui tombol", error);
       }
     }
   }
@@ -567,7 +587,6 @@ async function chooseNoOvertime() {
     const position = await getCurrentPosition();
     const location = makeLocation(position);
 
-    // Periksa kembali sebelum menyimpan.
     const latestSnapshot = await getDoc(attendanceRef);
 
     if (!latestSnapshot.exists()) {
@@ -607,7 +626,10 @@ async function chooseNoOvertime() {
       "success"
     );
   } catch (error) {
-    console.error("Gagal menyimpan pilihan tidak lembur:", error);
+    logFirebaseError(
+      "Gagal menyimpan pilihan tidak lembur",
+      error
+    );
 
     showNoOvertimeMessage(
       error.message || "Pilihan tidak lembur gagal disimpan.",
@@ -624,7 +646,10 @@ async function chooseNoOvertime() {
     try {
       await loadTodayAttendance();
     } catch (error) {
-      console.error("Gagal memperbarui status absensi:", error);
+      logFirebaseError(
+        "Gagal memperbarui status absensi",
+        error
+      );
     }
   }
 }
@@ -634,14 +659,20 @@ async function chooseNoOvertime() {
 // ========================================
 
 function renderHistoryCalendar(year, month, records) {
+  if (!historyCalendar) return;
+
   historyCalendar.replaceChildren();
   historyCalendar.style.display = "grid";
   historyCalendar.style.gridTemplateColumns =
     "repeat(7, minmax(0, 1fr))";
   historyCalendar.style.gap = "8px";
 
-  const firstDay = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
-  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const firstDay =
+    new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
+
+  const daysInMonth =
+    new Date(Date.UTC(year, month, 0)).getUTCDate();
+
   const todayKey = getDateKey();
 
   for (let i = 0; i < firstDay; i++) {
@@ -700,7 +731,7 @@ function renderHistoryCalendar(year, month, records) {
 // ========================================
 
 async function loadMonthlyHistory() {
-  if (!currentUser || !historyMonth.value) return;
+  if (!currentUser || !historyMonth?.value) return;
 
   const requestId = ++historyRequestId;
   const uid = currentUser.uid;
@@ -708,37 +739,56 @@ async function loadMonthlyHistory() {
   const [year, month] = monthKey.split("-").map(Number);
 
   if (!Number.isInteger(year) || !Number.isInteger(month)) {
-    historyMessage.textContent = "Bulan tidak valid.";
+    if (historyMessage) historyMessage.textContent = "Bulan tidak valid.";
     return;
   }
 
   const startDate = `${monthKey}-01`;
   const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+
   const endDate =
     `${monthKey}-${String(lastDay).padStart(2, "0")}`;
 
-  historyMessage.textContent = "Memuat riwayat...";
-  historyPresent.textContent = "—";
-  historyOvertime.textContent = "—";
-  historyCalendar.replaceChildren();
-  historyOvertimeList.replaceChildren();
+  if (historyMessage) historyMessage.textContent = "Memuat riwayat...";
+  if (historyPresent) historyPresent.textContent = "—";
+  if (historyOvertime) historyOvertime.textContent = "—";
+
+  historyCalendar?.replaceChildren();
+  historyOvertimeList?.replaceChildren();
 
   try {
+    console.log("[DEBUG] Membaca koleksi attendance.");
+
     const attendanceQuery = query(
       collection(db, "attendance"),
       where("userId", "==", uid)
     );
+
+    console.log("[DEBUG] Membaca koleksi overtime.");
 
     const overtimeQuery = query(
       collection(db, "overtime"),
       where("userId", "==", uid)
     );
 
-    const [attendanceSnapshot, overtimeSnapshot] =
-      await Promise.all([
-        getDocs(attendanceQuery),
-        getDocs(overtimeQuery)
-      ]);
+    let attendanceSnapshot;
+    let overtimeSnapshot;
+
+    try {
+      attendanceSnapshot = await getDocs(attendanceQuery);
+      console.log("[DEBUG] Koleksi attendance berhasil dibaca.");
+    } catch (error) {
+      logFirebaseError("Gagal membaca koleksi attendance", error);
+      throw error;
+    }
+
+    try {
+      overtimeSnapshot = await getDocs(overtimeQuery);
+      console.log("[DEBUG] Koleksi overtime berhasil dibaca.");
+    } catch (error) {
+      logFirebaseError("Gagal membaca koleksi overtime", error);
+      throw error;
+    }
 
     if (
       requestId !== historyRequestId ||
@@ -794,34 +844,43 @@ async function loadMonthlyHistory() {
       0
     );
 
-    historyPresent.textContent = `${presentCount} hari`;
-    historyOvertime.textContent = formatHours(totalHours);
+    if (historyPresent) {
+      historyPresent.textContent = `${presentCount} hari`;
+    }
+
+    if (historyOvertime) {
+      historyOvertime.textContent = formatHours(totalHours);
+    }
 
     renderHistoryCalendar(year, month, records);
 
-    if (overtimeRecords.length === 0) {
-      const empty = document.createElement("p");
-      empty.className = "text-sm text-slate-400";
-      empty.textContent =
-        "Belum ada catatan lembur pada bulan ini.";
-      historyOvertimeList.appendChild(empty);
-    } else {
-      overtimeRecords.forEach(item => {
-        const row = document.createElement("div");
-        row.className =
-          "flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950 p-4";
+    if (historyOvertimeList) {
+      if (overtimeRecords.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "text-sm text-slate-400";
+        empty.textContent =
+          "Belum ada catatan lembur pada bulan ini.";
 
-        const date = document.createElement("p");
-        date.className = "text-sm text-slate-300";
-        date.textContent = formatDateKey(item.dateKey);
+        historyOvertimeList.appendChild(empty);
+      } else {
+        overtimeRecords.forEach(item => {
+          const row = document.createElement("div");
 
-        const hours = document.createElement("p");
-        hours.className = "shrink-0 font-semibold text-sky-400";
-        hours.textContent = formatHours(item.hours);
+          row.className =
+            "flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950 p-4";
 
-        row.append(date, hours);
-        historyOvertimeList.appendChild(row);
-      });
+          const date = document.createElement("p");
+          date.className = "text-sm text-slate-300";
+          date.textContent = formatDateKey(item.dateKey);
+
+          const hours = document.createElement("p");
+          hours.className = "shrink-0 font-semibold text-sky-400";
+          hours.textContent = formatHours(item.hours);
+
+          row.append(date, hours);
+          historyOvertimeList.appendChild(row);
+        });
+      }
     }
 
     const label = new Intl.DateTimeFormat("id-ID", {
@@ -830,34 +889,59 @@ async function loadMonthlyHistory() {
       timeZone: TIME_ZONE
     }).format(new Date(Date.UTC(year, month - 1, 1, 12)));
 
-    historyMessage.textContent = `Menampilkan riwayat ${label}.`;
+    if (historyMessage) {
+      historyMessage.textContent =
+        `Menampilkan riwayat ${label}.`;
+    }
   } catch (error) {
-    console.error("Gagal memuat riwayat:", error);
+    logFirebaseError("Gagal memuat riwayat bulanan", error);
 
     if (requestId !== historyRequestId) return;
 
-    historyMessage.textContent =
-      error.code === "permission-denied"
-        ? "Akses riwayat ditolak. Periksa Firestore Rules."
-        : "Riwayat gagal dimuat. Silakan coba lagi.";
+    if (historyMessage) {
+      historyMessage.textContent =
+        error.code === "permission-denied"
+          ? "Akses riwayat ditolak. Periksa Firestore Rules."
+          : "Riwayat gagal dimuat. Silakan coba lagi.";
+    }
 
-    historyPresent.textContent = "—";
-    historyOvertime.textContent = "—";
+    if (historyPresent) historyPresent.textContent = "—";
+    if (historyOvertime) historyOvertime.textContent = "—";
   }
 }
 
 // ========================================
-// PROFIL KARYAWAN
+// VERIFIKASI AKUN
 // ========================================
 
 async function verifyEmployee(user) {
-  const snapshot = await getDoc(doc(db, "users", user.uid));
+  console.log("[DEBUG] UID login:", user.uid);
+
+  const userRef = doc(db, "users", user.uid);
+
+  let snapshot;
+
+  try {
+    snapshot = await getDoc(userRef);
+    console.log(
+      "[DEBUG] Baca profil berhasil:",
+      snapshot.exists()
+    );
+  } catch (error) {
+    logFirebaseError("Gagal membaca profil users", error);
+    throw error;
+  }
 
   if (!snapshot.exists()) {
-    throw new Error("Profil akun tidak ditemukan. Hubungi Admin.");
+    throw new Error(
+      "Profil akun tidak ditemukan. Hubungi Admin."
+    );
   }
 
   const profile = snapshot.data();
+
+  console.log("[DEBUG] Role:", profile.role);
+  console.log("[DEBUG] Status aktif:", profile.isActive);
 
   if (profile.isActive !== true) {
     throw new Error("Akun dinonaktifkan oleh Admin.");
@@ -872,15 +956,35 @@ async function verifyEmployee(user) {
     throw new Error("Akun tidak memiliki akses karyawan.");
   }
 
-  employeeName.textContent = profile.name || "Karyawan";
-  employeePosition.textContent =
-    profile.position || "Jabatan belum diisi";
-  accountStatus.textContent = "Akun Aktif";
+  if (employeeName) {
+    employeeName.textContent = profile.name || "Karyawan";
+  }
+
+  if (employeePosition) {
+    employeePosition.textContent =
+      profile.position || "Jabatan belum diisi";
+  }
+
+  if (accountStatus) {
+    accountStatus.textContent = "Akun Aktif";
+  }
 
   currentUser = user;
-  historyMonth.value = getCurrentMonthKey();
 
-  await loadTodayAttendance();
+  if (historyMonth) {
+    historyMonth.value = getCurrentMonthKey();
+  }
+
+  try {
+    await loadTodayAttendance();
+    console.log("[DEBUG] Baca absensi hari ini berhasil.");
+  } catch (error) {
+    logFirebaseError("Gagal membaca absensi hari ini", error);
+    throw error;
+  }
+
+  // Fungsi ini menangani error riwayat sendiri agar
+  // kegagalan riwayat tidak menggagalkan validasi profil.
   await loadMonthlyHistory();
 
   showMessage("Akun aktif. Silakan lakukan absensi.", "success");
@@ -890,23 +994,26 @@ async function verifyEmployee(user) {
 // EVENT LISTENERS
 // ========================================
 
-attendanceBtn.addEventListener("click", submitAttendance);
-historyMonth.addEventListener("change", loadMonthlyHistory);
+attendanceBtn?.addEventListener("click", submitAttendance);
+historyMonth?.addEventListener("change", loadMonthlyHistory);
 
-if (noOvertimeBtn) {
-  noOvertimeBtn.addEventListener("click", chooseNoOvertime);
-}
+noOvertimeBtn?.addEventListener("click", chooseNoOvertime);
 
-logoutBtn.addEventListener("click", async () => {
+logoutBtn?.addEventListener("click", async () => {
   logoutBtn.disabled = true;
 
   try {
     await signOut(auth);
     window.location.replace("./index.html");
   } catch (error) {
-    console.error("Gagal keluar:", error);
+    logFirebaseError("Gagal keluar", error);
+
     logoutBtn.disabled = false;
-    showMessage("Gagal keluar. Silakan coba kembali.", "error");
+
+    showMessage(
+      "Gagal keluar. Silakan coba kembali.",
+      "error"
+    );
   }
 });
 
@@ -935,21 +1042,27 @@ onAuthStateChanged(auth, async user => {
   clockInterval = setInterval(updateClock, 1000);
 
   if (isVerifying) return;
+
   isVerifying = true;
 
   try {
     await verifyEmployee(user);
   } catch (error) {
-    console.error("Pemeriksaan akun gagal:", error);
+    logFirebaseError("Pemeriksaan akun gagal", error);
 
-    accountStatus.textContent = "Pemeriksaan gagal";
+    if (accountStatus) {
+      accountStatus.textContent = "Pemeriksaan gagal";
+    }
+
     showMessage(
       error.message || "Gagal memeriksa akun.",
       "error"
     );
 
-    historyMessage.textContent =
-      "Riwayat belum dapat dimuat.";
+    if (historyMessage) {
+      historyMessage.textContent =
+        "Riwayat belum dapat dimuat.";
+    }
 
     setAttendanceButton(false, "Absensi Belum Tersedia");
   } finally {
